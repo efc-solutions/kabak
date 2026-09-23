@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kabak · Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* ─── TOKENS — layout monocromático ─── */
+:root {
+  --bg:        #f7f7f5;
+  --surface:   #ffffff;
+  --surface2:  #f0f0ee;
+  --surface3:  #e8e8e5;
+  --text:      #111110;
+  --text2:     #555550;
+  --text3:     #999990;
+  --accent:    #111110;
+  --accent-bg: #e8e8e5;
+  --pos:       #1a6b3c;
+  --pos-bg:    #e6f4ec;
+  --neg:       #b91c1c;
+  --neg-bg:    #fce8e8;
+  --warn:      #92400e;
+  --warn-bg:   #fef3c7;
+  --border:    #ddddd8;
+  --shadow:    0 1px 2px rgba(0,0,0,.06), 0 3px 10px rgba(0,0,0,.04);
+  color-scheme: light;
+}
+/* página sempre clara — sem dark mode */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100%;
+}
+
+/* ─── TOPBAR / NAVEGAÇÃO ─── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--text);
+  border-bottom: 1px solid #000;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.topbar-brand {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #ffffff;
+  padding-right: 24px;
+  border-right: 1px solid rgba(255,255,255,.15);
+  margin-right: 16px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.topbar-brand span { color: rgba(255,255,255,.45); }
+.nav-tabs {
+  display: flex;
+  gap: 0;
+  height: 48px;
+}
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,.5);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.nav-tab:hover { color: rgba(255,255,255,.85); }
+.nav-tab.active {
+  color: #ffffff;
+  border-bottom-color: #ffffff;
+  font-weight: 600;
+}
+.nav-tab .tab-icon { font-size: 15px; }
+
+/* ─── CONTEÚDO DAS ABAS ─── */
+.tab-panel { display: none; padding: 24px 20px; max-width: 1100px; margin: 0 auto; }
+.tab-panel.active { display: flex; flex-direction: column; gap: 24px; }
+
+/* ════════════════════════════════════════
+   ABA 1: DASHBOARD (estilos)
+════════════════════════════════════════ */
+.header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.header-left { display: flex; flex-direction: column; gap: 4px; }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); }
+.page-title { font-size: 22px; font-weight: 700; color: var(--text); }
+.subtitle { font-size: 13px; color: var(--text2); }
+.badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+.badge.live { background: var(--pos-bg); color: var(--pos); border-color: rgba(26,107,60,.2); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+.filter-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.filter-label { font-size: 12px; color: var(--text3); font-weight: 500; }
+.pill {
+  padding: 5px 14px; border-radius: 4px; font-size: 12px; font-weight: 500;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text2);
+  cursor: pointer; transition: all .15s;
+}
+.pill:hover { border-color: var(--text2); color: var(--text); }
+.pill.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; }
+.kpi {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  padding: 16px; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow);
+}
+.kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); }
+.kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.kpi-sub { font-size: 12px; color: var(--text2); }
+.kpi-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px; width: fit-content; }
+.kpi-tag.pos { background: var(--pos-bg); color: var(--pos); }
+.kpi-tag.warn { background: var(--warn-bg); color: var(--warn); }
+
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 20px; box-shadow: var(--shadow); }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.section-sub { font-size: 12px; color: var(--text3); }
+
+.chart-wrap { overflow-x: auto; }
+.chart-canvas { width: 100%; height: 260px; display: block; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+.table-wrap { overflow-x: auto; border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+thead th:not(:first-child) { text-align: right; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--surface2); }
+tbody td { padding: 9px 12px; color: var(--text); font-variant-numeric: tabular-nums; }
+tbody td:not(:first-child) { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+tfoot td { padding: 10px 12px; font-weight: 700; font-size: 13px; border-top: 2px solid var(--border); background: var(--surface2); font-variant-numeric: tabular-nums; }
+tfoot td:not(:first-child) { text-align: right; font-family: 'JetBrains Mono', monospace; }
+
+.canal-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+
+.lacunas-banner {
+  display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px;
+  background: var(--warn-bg); border: 1px solid var(--warn); border-radius: 8px;
+  border-left: 3px solid var(--warn);
+}
+.lacunas-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+.lacunas-text { font-size: 13px; color: var(--text); }
+.lacunas-text strong { color: var(--warn); }
+
+.shopify-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.shopify-card { background: var(--surface2); border-radius: 8px; padding: 12px 14px; }
+.shopify-label { font-size: 11px; color: var(--text3); font-weight: 500; margin-bottom: 4px; }
+.shopify-val { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.shopify-val.neg { color: var(--neg); }
+
+.loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text3); font-size: 13px; gap: 10px; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--text2); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-msg { padding: 20px; text-align: center; color: var(--neg); font-size: 13px; }
+
+/* ════════════════════════════════════════
+   ABA 2: CHECKLIST (estilos)
+════════════════════════════════════════ */
+.ck-header { }
+.ck-header h2 { font-size: 20px; font-weight: 700; color: var(--text); }
+.ck-header p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+.progress-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+}
+.progress-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; font-size: 13px; }
+.progress-meta strong { font-weight: 600; }
+.bar-track { height: 8px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--text); border-radius: 99px; transition: width .4s ease; }
+.prog-legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--text2); }
+.prog-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+
+.ck-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.ck-filter {
+  font-size: 12.5px; font-weight: 500; padding: 6px 14px; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text2);
+  cursor: pointer; transition: all .15s;
+}
+.ck-filter:hover { border-color: var(--text2); color: var(--text); }
+.ck-filter.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+.etapas-list { display: flex; flex-direction: column; gap: 16px; }
+
+.etapa {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.etapa-header {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  cursor: pointer; user-select: none; transition: background .15s;
+}
+.etapa-header:hover { background: var(--surface2); }
+.etapa-emoji {
+  font-size: 18px; flex-shrink: 0;
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.etapa-title { flex: 1; }
+.etapa-title h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+.etapa-title p { font-size: 12px; color: var(--text2); margin-top: 1px; }
+.etapa-badge { font-size: 11.5px; font-weight: 600; padding: 3px 10px; border-radius: 99px; flex-shrink: 0; }
+.badge-ok   { background: var(--pos-bg);  color: var(--pos); }
+.badge-warn { background: var(--warn-bg); color: var(--warn); }
+.badge-pend { background: var(--neg-bg);  color: var(--neg); }
+.etapa-chevron { color: var(--text3); font-size: 14px; transition: transform .2s; flex-shrink: 0; }
+.etapa.open .etapa-chevron { transform: rotate(180deg); }
+
+.etapa-body { display: none; padding: 0 18px 14px; border-top: 1px solid var(--border); }
+.etapa.open .etapa-body { display: block; }
+
+.ind-list { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+.ind-item {
+  display: flex; align-items: flex-start; gap: 11px; padding: 11px 13px;
+  border-radius: 9px; background: var(--surface2); border: 1px solid transparent;
+  transition: border-color .15s;
+}
+.ind-item:hover { border-color: var(--border); }
+.ind-item.done { opacity: .5; }
+.ind-check {
+  width: 17px; height: 17px; border-radius: 5px;
+  border: 2px solid var(--border); background: var(--surface);
+  flex-shrink: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s; margin-top: 2px;
+}
+.ind-check.checked { background: var(--text); border-color: var(--text); }
+.ind-check.checked::after {
+  content: ''; display: block; width: 9px; height: 5px;
+  border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translate(1px,-1px);
+}
+.ind-content { flex: 1; }
+.ind-name { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.4; }
+.ind-meta { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 5px; align-items: center; }
+.tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+.tag-disponivel { background: var(--pos-bg);  color: var(--pos); }
+.tag-parcial    { background: var(--warn-bg); color: var(--warn); }
+.tag-manual     { background: var(--neg-bg);  color: var(--neg); }
+.tag-futuro     { background: var(--accent-bg); color: var(--accent); }
+.ind-fonte { font-size: 11.5px; color: var(--text3); }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 600px) {
+  .topbar-brand { font-size: 13px; padding-right: 14px; margin-right: 8px; }
+  .nav-tab { padding: 0 10px; font-size: 12px; }
+  .tab-panel { padding: 16px 12px; }
+  .kpi-value { font-size: 18px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOPBAR ── -->
+<nav class="topbar">
+  <div class="topbar-brand"><span>K</span>ABAK</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="dashboard" onclick="abrirAba('dashboard',this)">
+      <span class="tab-icon">📊</span> Fluxo de Caixa
+    </button>
+    <button class="nav-tab" data-tab="checklist" onclick="abrirAba('checklist',this)">
+      <span class="tab-icon">✅</span> Checklist KPIs
+    </button>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════
+     ABA 1: DASHBOARD
+════════════════════════════════════════ -->
+<div class="tab-panel active" id="tab-dashboard">
+
+  <div class="header">
+    <div class="header-left">
+      <span class="eyebrow">Kabak · Dashboard Financeiro</span>
+      <h1 class="page-title">Fluxo de Caixa</h1>
+      <p class="subtitle" id="periodo-sub">Carregando dados…</p>
+    </div>
+    <div>
+      <span class="badge live"><span class="dot"></span> Dados ao vivo</span>
+    </div>
+  </div>
+
+  <div class="lacunas-banner">
+    <span class="lacunas-icon">⚠️</span>
+    <div class="lacunas-text">
+      <strong>Receitas mapeadas · Custos pendentes:</strong>
+      aluguel, folha e despesas fixas entram até quinta às 12h (9 lacunas com Kris, Mada e Jean).
+      O painel já mostra o lado das entradas completo.
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <span class="filter-label">Mês:</span>
+    <button class="pill active" data-mes="todos" onclick="filtrar(this)">Todos</button>
+    <button class="pill" data-mes="2026-06" onclick="filtrar(this)">Jun</button>
+    <button class="pill" data-mes="2026-07" onclick="filtrar(this)">Jul</button>
+    <button class="pill" data-mes="2026-08" onclick="filtrar(this)">Ago</button>
+    <button class="pill" data-mes="2026-09" onclick="filtrar(this)">Set</button>
+  </div>
+
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="loading"><span class="spinner"></span> Carregando…</div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Evolução por Canal</div>
+        <div class="section-sub">Faturamento mensal — todos os canais</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas class="chart-canvas" id="chart-canais"></canvas>
+    </div>
+    <div class="legend" id="legend-canais"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Site (Shopify)</div>
+        <div class="section-sub">Gross sales, descontos, estornos e líquido</div>
+      </div>
+    </div>
+    <div id="shopify-content"><div class="loading"><span class="spinner"></span></div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Vendas por Canal e Mês</div>
+        <div class="section-sub" id="tabela-sub">Detalhamento por loja</div>
+      </div>
+    </div>
+    <div class="table-wrap" id="tabela-canais">
+      <div class="loading"><span class="spinner"></span></div>
+    </div>
+  </div>
+
+</div><!-- /tab-dashboard -->
+
+<!-- ════════════════════════════════════════
+     ABA 2: CHECKLIST
+════════════════════════════════════════ -->
+<div class="tab-panel" id="tab-checklist">
+
+  <div class="ck-header">
+    <h2>Checklist de Indicadores</h2>
+    <p>7 etapas do processo · marque conforme constrói cada indicador</p>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-meta">
+      <strong id="prog-label">0 de 30 indicadores construídos</strong>
+      <span id="prog-pct">0%</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="bar-fill" style="width:0%"></div></div>
+    <div class="prog-legend">
+      <span><span class="prog-dot" style="background:var(--pos)"></span>Disponível nos dados</span>
+      <span><span class="prog-dot" style="background:var(--warn)"></span>Parcial / precisa calcular</span>
+      <span><span class="prog-dot" style="background:var(--neg)"></span>Manual / sem fonte ainda</span>
+      <span><span class="prog-dot" style="background:var(--accent)"></span>Futuro (nova integração)</span>
+    </div>
+  </div>
+
+  <div class="ck-filters">
+    <button class="ck-filter active" data-filter="all" onclick="ckFiltrar(this)">Todos</button>
+    <button class="ck-filter" data-filter="disponivel" onclick="ckFiltrar(this)">✓ Disponível</button>
+    <button class="ck-filter" data-filter="parcial" onclick="ckFiltrar(this)">◑ Parcial</button>
+    <button class="ck-filter" data-filter="manual" onclick="ckFiltrar(this)">✎ Manual</button>
+    <button class="ck-filter" data-filter="futuro" onclick="ckFiltrar(this)">◌ Futuro</button>
+  </div>
+
+  <div class="etapas-list" id="etapas-list"></div>
+
+</div><!-- /tab-checklist -->
+
+<!-- ─── LIBS ─── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<script>
+/* ════════════════════════════════════════
+   NAVEGAÇÃO ENTRE ABAS
+════════════════════════════════════════ */
+function abrirAba(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'dashboard' && dadosCanais.length) renderGrafico();
+}
+
+/* ════════════════════════════════════════
+   DASHBOARD — DADOS E RENDER
+════════════════════════════════════════ */
+const SHEET_ID = '11yMLFSCdXuQUOsXrGlSfviKJjTsbvgj9Mu7YZjILStU';
+
+function sheetByName(name) {
+  return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}`;
+}
+
+// paleta editorial: cores distintas e legíveis sobre branco
+const CANAL_CORES = {
+  'Cachoeira':           '#1a1a1a',   // quase preto
+  'Santa Rita':          '#e05c1a',   // terracota
+  'Site (inferido)':     '#2d7a4f',   // verde escuro
+  'Site (pelo Shopify)': '#2d7a4f',
+  'Shopee (inferido)':   '#c8a227',   // âmbar
+  'Marketplace':         '#c8a227',
+};
+const CANAL_CORES_FALLBACK = ['#3b5998','#c0392b','#27ae60','#d4a800','#8e44ad','#16a085'];
+function corCanal(c) {
+  for (const [k,v] of Object.entries(CANAL_CORES))
+    if (c && c.toLowerCase().includes(k.split(' ')[0].toLowerCase())) return v;
+  // fallback determinístico por nome
+  const idx = Math.abs([...( c||'')].reduce((s,ch)=>s+ch.charCodeAt(0),0)) % CANAL_CORES_FALLBACK.length;
+  return CANAL_CORES_FALLBACK[idx];
+}
+
+let dadosCanais = [], dadosShopify = [], mesFiltro = 'todos';
+
+async function fetchCSV(name) {
+  return new Promise((res, rej) => {
+    Papa.parse(sheetByName(name), {
+      download: true, header: true, skipEmptyLines: true,
+      complete: r => res(r.data), error: e => rej(e),
+    });
+  });
+}
+
+function brl(v)  { return (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}); }
+function brl2(v) { return (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+function filtrarDados(dados, campo) {
+  return mesFiltro === 'todos' ? dados : dados.filter(r => (r[campo]||'').startsWith(mesFiltro));
+}
+
+function renderKPIs() {
+  const validos = filtrarDados(dadosCanais, 'data').filter(r => r.conta_como_venda === 'sim');
+  const totalGeral  = validos.reduce((s,r) => s+(parseFloat(r.total)||0), 0);
+  const totalPedidos= validos.reduce((s,r) => s+(parseInt(r.pedidos)||0), 0);
+  const ticket = totalPedidos > 0 ? totalGeral/totalPedidos : 0;
+  const porCanal = {};
+  validos.forEach(r => { const c=r.loja||'Outro'; porCanal[c]=(porCanal[c]||0)+(parseFloat(r.total)||0); });
+  const topCanal = Object.entries(porCanal).sort((a,b)=>b[1]-a[1])[0];
+  const shopLiq = filtrarDados(dadosShopify,'data').reduce((s,r)=>s+(parseFloat(r.net_sales_brl)||0),0);
+
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi">
+      <span class="kpi-label">Faturamento Total</span>
+      <span class="kpi-value">${brl(totalGeral)}</span>
+      <span class="kpi-sub">todos os canais · vendas confirmadas</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Pedidos</span>
+      <span class="kpi-value">${totalPedidos.toLocaleString('pt-BR')}</span>
+      <span class="kpi-sub">ticket médio ${brl2(ticket)}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Canal Líder</span>
+      <span class="kpi-value" style="font-size:16px">${topCanal?topCanal[0]:'—'}</span>
+      <span class="kpi-sub">${topCanal?brl(topCanal[1]):''}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Site Líquido (Shopify)</span>
+      <span class="kpi-value">${brl(shopLiq)}</span>
+      <span class="kpi-sub">após descontos e estornos</span>
+    </div>
+    <div class="kpi" style="border-left:3px solid var(--warn)">
+      <span class="kpi-label">Custos Fixos</span>
+      <span class="kpi-value" style="font-size:16px;color:var(--text3)">Pendente</span>
+      <span class="kpi-tag warn">⏳ até quinta 12h</span>
+    </div>
+    <div class="kpi" style="border-left:3px solid var(--text3)">
+      <span class="kpi-label">Resultado Líquido</span>
+      <span class="kpi-value" style="font-size:16px;color:var(--text3)">—</span>
+      <span class="kpi-sub">após custos (em breve)</span>
+    </div>`;
+  document.getElementById('periodo-sub').textContent =
+    mesFiltro==='todos' ? 'Jun – Set 2026 · Fonte: GitHub → Sheets' : mesFiltro+' · Fonte: GitHub → Sheets';
+}
+
+function renderGrafico() {
+  const validos = filtrarDados(dadosCanais,'data').filter(r=>r.conta_como_venda==='sim');
+  const meses  = [...new Set(validos.map(r=>r.data?.substring(0,7)))].sort();
+  const canais = [...new Set(validos.map(r=>r.loja))].filter(Boolean);
+  const pivot  = {};
+  meses.forEach(m=>{pivot[m]={};canais.forEach(c=>pivot[m][c]=0);});
+  validos.forEach(r=>{const m=r.data?.substring(0,7);if(m&&pivot[m])pivot[m][r.loja]=(pivot[m][r.loja]||0)+(parseFloat(r.total)||0);});
+
+  const canvas = document.getElementById('chart-canais');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio||1;
+  const W = canvas.offsetWidth||700, H = canvas.offsetHeight||260;
+  canvas.width=W*dpr; canvas.height=H*dpr; ctx.scale(dpr,dpr);
+
+  const pad={top:20,right:20,bottom:40,left:72};
+  const cW=W-pad.left-pad.right, cH=H-pad.top-pad.bottom;
+  const maxVal=Math.max(...meses.map(m=>canais.reduce((s,c)=>s+(pivot[m][c]||0),0)));
+  const tick=Math.ceil(maxVal/4/10000)*10000||50000;
+  const st=getComputedStyle(document.documentElement);
+  const cText3=st.getPropertyValue('--text3').trim()||'#9898b0';
+  const cBorder=st.getPropertyValue('--border').trim()||'#e2e2ea';
+
+  ctx.clearRect(0,0,W,H);
+  for(let v=0;v<=maxVal+tick;v+=tick){
+    const y=pad.top+cH-(v/(maxVal||1))*cH;
+    if(y<pad.top)break;
+    ctx.beginPath();ctx.strokeStyle=cBorder;ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=cText3;ctx.font='10px Inter,sans-serif';ctx.textAlign='right';
+    ctx.fillText(brl(v),pad.left-6,y+3);
+  }
+  const gW=cW/meses.length, barW=Math.min(gW-12,56);
+  meses.forEach((m,mi)=>{
+    let y0=pad.top+cH;
+    const cx=pad.left+mi*gW+gW/2;
+    canais.forEach(c=>{
+      const v=pivot[m][c]||0;if(!v)return;
+      const h=(v/(maxVal||1))*cH;
+      ctx.fillStyle=corCanal(c);ctx.fillRect(cx-barW/2,y0-h,barW,h);y0-=h;
+    });
+    ctx.fillStyle=cText3;ctx.font='11px Inter,sans-serif';ctx.textAlign='center';
+    const lbl={'2026-06':'Jun','2026-07':'Jul','2026-08':'Ago','2026-09':'Set'};
+    ctx.fillText(lbl[m]||m,cx,pad.top+cH+20);
+  });
+  document.getElementById('legend-canais').innerHTML=
+    canais.map(c=>`<span class="legend-item"><span class="legend-dot" style="background:${corCanal(c)}"></span>${c}</span>`).join('');
+}
+
+function renderShopify() {
+  const dados=filtrarDados(dadosShopify,'data');
+  const gross=dados.reduce((s,r)=>s+(parseFloat(r.gross_sales_brl)||0),0);
+  const disc =dados.reduce((s,r)=>s+(parseFloat(r.discounts_brl)||0),0);
+  const rev  =dados.reduce((s,r)=>s+(parseFloat(r.sales_reversals_brl)||0),0);
+  const net  =dados.reduce((s,r)=>s+(parseFloat(r.net_sales_brl)||0),0);
+  const peds =dados.reduce((s,r)=>s+(parseInt(r.pedidos)||0),0);
+  document.getElementById('shopify-content').innerHTML=`
+    <div class="shopify-grid">
+      <div class="shopify-card"><div class="shopify-label">Gross Sales</div><div class="shopify-val">${brl(gross)}</div></div>
+      <div class="shopify-card"><div class="shopify-label">Descontos</div><div class="shopify-val neg">${brl(disc)}</div></div>
+      <div class="shopify-card"><div class="shopify-label">Estornos</div><div class="shopify-val neg">${brl(rev)}</div></div>
+      <div class="shopify-card" style="border:1px solid var(--pos);background:var(--pos-bg)">
+        <div class="shopify-label">Net Sales</div><div class="shopify-val" style="color:var(--pos)">${brl(net)}</div>
+      </div>
+      <div class="shopify-card"><div class="shopify-label">Pedidos (site)</div><div class="shopify-val">${peds.toLocaleString('pt-BR')}</div></div>
+    </div>`;
+}
+
+function renderTabela() {
+  const validos=filtrarDados(dadosCanais,'data').filter(r=>r.conta_como_venda==='sim');
+  const grupos={};
+  validos.forEach(r=>{
+    const mes=r.data?.substring(0,7)||'';const key=`${mes}__${r.loja}`;
+    if(!grupos[key])grupos[key]={mes,loja:r.loja,pedidos:0,total:0};
+    grupos[key].pedidos+=parseInt(r.pedidos)||0;grupos[key].total+=parseFloat(r.total)||0;
+  });
+  const rows=Object.values(grupos).sort((a,b)=>a.mes!==b.mes?a.mes.localeCompare(b.mes):b.total-a.total);
+  const tot=rows.reduce((s,r)=>s+r.total,0),ped=rows.reduce((s,r)=>s+r.pedidos,0);
+  const ml={'2026-06':'Jun/26','2026-07':'Jul/26','2026-08':'Ago/26','2026-09':'Set/26 (parcial)'};
+  document.getElementById('tabela-canais').innerHTML=`
+    <table>
+      <thead><tr><th>Mês</th><th>Canal</th><th>Pedidos</th><th>Faturamento</th><th>Ticket Médio</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr>
+        <td>${ml[r.mes]||r.mes}</td>
+        <td><span class="canal-tag" style="background:${corCanal(r.loja)}22;color:${corCanal(r.loja)}">${r.loja}</span></td>
+        <td>${r.pedidos.toLocaleString('pt-BR')}</td>
+        <td>${brl(r.total)}</td>
+        <td>${r.pedidos>0?brl2(r.total/r.pedidos):'—'}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="2">Total</td><td>${ped.toLocaleString('pt-BR')}</td><td>${brl(tot)}</td><td>${ped>0?brl2(tot/ped):'—'}</td></tr></tfoot>
+    </table>`;
+  document.getElementById('tabela-sub').textContent=`${rows.length} combinações · ${ped.toLocaleString('pt-BR')} pedidos confirmados`;
+}
+
+function renderAll(){ renderKPIs(); renderGrafico(); renderShopify(); renderTabela(); }
+
+function filtrar(el){
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active'); mesFiltro=el.dataset.mes; renderAll();
+}
+
+async function initDashboard(){
+  try{
+    const [c,s]=await Promise.all([fetchCSV('vendas-diarias'),fetchCSV('shopify-diario')]);
+    dadosCanais=c; dadosShopify=s; renderAll();
+  }catch(e){
+    document.getElementById('kpi-grid').innerHTML=`<div class="error-msg">Erro ao carregar: ${e.message}<br><small>Confirme que o Google Sheets está com acesso público.</small></div>`;
+  }
+}
+
+/* ════════════════════════════════════════
+   CHECKLIST — DADOS E RENDER
+════════════════════════════════════════ */
+const CK_DATA = [
+  { id:'aportes', emoji:'💰', titulo:'Aportes', sub:'Capital + tecido', inds:[
+    {id:'a1',nome:'Aporte total por sócio, acumulado',status:'manual',fonte:'Lançamento manual — planilha de sócios'},
+    {id:'a2',nome:'Aporte em dinheiro vs. em tecido (separados)',status:'manual',fonte:'Lançamento manual por entrada'},
+    {id:'a3',nome:'% do aporte já convertido em estoque/produto',status:'manual',fonte:'Cruza aportes (manual) × custo de estoque (Bling)'},
+  ]},
+  { id:'producao', emoji:'🧵', titulo:'Produção', sub:'Mão de obra', inds:[
+    {id:'p1',nome:'Custo de mão de obra por peça',status:'manual',fonte:'Lançamento manual por ordem de produção'},
+    {id:'p2',nome:'Custo de mão de obra por linha de produto',status:'manual',fonte:'Agrupa custo por peça por linha'},
+    {id:'p3',nome:'Peças produzidas por período',status:'manual',fonte:'Saída do processo de produção — ainda não no Bling'},
+    {id:'p4',nome:'Lead time: dias entre corte e peça pronta',status:'manual',fonte:'Data corte e data conclusão por ordem de produção'},
+  ]},
+  { id:'estoque', emoji:'📦', titulo:'Estoque', sub:'Valorado a custo', inds:[
+    {id:'e1',nome:'Valor total do estoque a custo',status:'parcial',fonte:'Bling — precisa mapear campo de custo unitário'},
+    {id:'e2',nome:'Giro de estoque por linha (vendidas ÷ em estoque)',status:'parcial',fonte:'Bling vendas + estoque atual — cálculo a construir'},
+    {id:'e3',nome:'Cobertura em dias no ritmo de venda atual',status:'parcial',fonte:'Giro × dias do período'},
+    {id:'e4',nome:'Idade média do estoque',status:'futuro',fonte:'Precisa de data de entrada por SKU no Bling'},
+  ]},
+  { id:'canais', emoji:'🏪', titulo:'Canais', sub:'Site, lojas físicas, marketplace', inds:[
+    {id:'c1',nome:'Faturamento por canal (site, cada loja, marketplace)',status:'disponivel',fonte:'vendas-diarias.csv → coluna loja + total'},
+    {id:'c2',nome:'% de participação por canal no total',status:'disponivel',fonte:'Calculado sobre vendas-diarias'},
+    {id:'c3',nome:'Ticket médio por canal',status:'disponivel',fonte:'total ÷ pedidos por canal — vendas-diarias'},
+  ]},
+  { id:'vendas', emoji:'📈', titulo:'Vendas', sub:'Giro por produto', inds:[
+    {id:'v1',nome:'Pedidos por dia e por mês',status:'disponivel',fonte:'pedidos.csv — data + count'},
+    {id:'v2',nome:'Lucro por produto (preço − custo)',status:'futuro',fonte:'Precisa de custo unitário do Bling por SKU'},
+    {id:'v3',nome:'Top produtos por lucro total',status:'futuro',fonte:'Depende de v2 (lucro por produto)'},
+    {id:'v4',nome:'Taxa de conversão do site (visitas → pedido pago)',status:'parcial',fonte:'shopify-site-diario (pedidos) + sessões do GA4 — falta GA4'},
+    {id:'v5',nome:'Formas de pagamento — distribuição',status:'disponivel',fonte:'formas-de-pagamento.csv'},
+    {id:'v6',nome:'Taxa de pedidos pagos vs. expirados',status:'disponivel',fonte:'pedidos.csv → situacao_id'},
+  ]},
+  { id:'entrega', emoji:'🚚', titulo:'Entrega', sub:'Envio, trocas e devoluções', inds:[
+    {id:'en1',nome:'Prazo médio de entrega (pagamento aprovado → recebido)',status:'futuro',fonte:'Precisa de data de entrega confirmada'},
+    {id:'en2',nome:'% de pedidos entregues no prazo prometido',status:'futuro',fonte:'Depende de data prometida + data real'},
+    {id:'en3',nome:'Custo de frete por pedido',status:'parcial',fonte:'pedidos.csv → custo_frete — já existe!'},
+    {id:'en4',nome:'Taxa de devolução por produto e por linha',status:'futuro',fonte:'Dados de devolução — não está nos CSVs atuais'},
+    {id:'en5',nome:'Taxa de troca (tamanho/cor)',status:'futuro',fonte:'Motivo de troca — campo ainda não capturado'},
+    {id:'en6',nome:'Tempo médio até reembolso ou reenvio',status:'futuro',fonte:'Data abertura × data resolução do caso'},
+    {id:'en7',nome:'Custo total de logística reversa',status:'futuro',fonte:'Frete retorno + custo reenvio — não capturado'},
+  ]},
+  { id:'financeiro', emoji:'💳', titulo:'Financeiro', sub:'Fluxo de caixa', inds:[
+    {id:'f1',nome:'Total lançado × total efetivamente pago',status:'parcial',fonte:'pedidos.csv (lançado) — pagamento confirmado precisa do Bling financeiro'},
+    {id:'f2',nome:'Saldo do período (recebido − pago)',status:'manual',fonte:'Receitas do Bling + custos fixos (ainda manuais)'},
+    {id:'f3',nome:'% de pagamentos que expiram sem pagar',status:'disponivel',fonte:'pedidos.csv → situacao_id = expirado ÷ total'},
+    {id:'f4',nome:'Prazo médio entre vencimento e pagamento',status:'parcial',fonte:'primeiro_vencimento e ultimo_vencimento no pedidos.csv — falta data do pagamento real'},
+    {id:'f5',nome:'Custos fixos (aluguel, folha, despesas fixas)',status:'manual',fonte:'Lançamento manual — meta quinta 12h'},
+  ]},
+  { id:'marketing', emoji:'📣', titulo:'Marketing', sub:'Meta + Google Ads', inds:[
+    {id:'m1',nome:'Investimento em marketing % do faturamento',status:'manual',fonte:'Gasto em ads lançado manualmente'},
+    {id:'m2',nome:'ROAS por campanha',status:'futuro',fonte:'API Meta Ads ou Google Ads — não integrado'},
+    {id:'m3',nome:'Custo por compra vs. ticket médio',status:'futuro',fonte:'CPA das plataformas de ads + ticket de vendas-diarias'},
+    {id:'m4',nome:'Sessões do site por origem',status:'futuro',fonte:'Google Analytics 4 — não integrado'},
+    {id:'m5',nome:'Visitas ao site por dia (total)',status:'disponivel',fonte:'shopify-site-diario.csv'},
+  ]},
+];
+
+const CK_TOTAL = CK_DATA.reduce((s,e)=>s+e.inds.length, 0);
+
+function ckLoadState() {
+  try { return JSON.parse(localStorage.getItem('kabak-ck')||'{}'); } catch { return {}; }
+}
+function ckSaveState(st) {
+  try { localStorage.setItem('kabak-ck', JSON.stringify(st)); } catch {}
+}
+
+let ckState  = ckLoadState();
+let ckFilter = 'all';
+
+function ckUpdateProgress() {
+  const done = Object.values(ckState).filter(Boolean).length;
+  const pct  = Math.round(done/CK_TOTAL*100);
+  document.getElementById('prog-label').textContent = `${done} de ${CK_TOTAL} indicadores construídos`;
+  document.getElementById('prog-pct').textContent   = `${pct}%`;
+  document.getElementById('bar-fill').style.width   = pct+'%';
+}
+
+function ckBadge(etapa) {
+  const all   = etapa.inds;
+  const done  = all.filter(i=>ckState[i.id]).length;
+  const disp  = all.filter(i=>i.status==='disponivel').length;
+  if (done===all.length) return ['badge-ok',`✓ ${done}/${all.length}`];
+  if (done>0)  return ['badge-warn',`${done}/${all.length} feitos`];
+  if (disp===all.length) return ['badge-ok',`${disp} prontos`];
+  if (disp>0)  return ['badge-warn',`${disp} disponíveis`];
+  return ['badge-pend','Sem dados ainda'];
+}
+
+function ckTagLabel(status) {
+  return {
+    disponivel: ['tag-disponivel','✓ Disponível'],
+    parcial:    ['tag-parcial',   '◑ Parcial'],
+    manual:     ['tag-manual',    '✎ Manual'],
+    futuro:     ['tag-futuro',    '◌ Futuro'],
+  }[status] || ['',''];
+}
+
+function ckRender() {
+  const container = document.getElementById('etapas-list');
+  container.innerHTML = '';
+  CK_DATA.forEach(etapa => {
+    const inds = etapa.inds.filter(i=>ckFilter==='all'||i.status===ckFilter);
+    if (!inds.length) return;
+    const [bClass,bText] = ckBadge(etapa);
+    const el = document.createElement('div');
+    el.className = 'etapa open';
+    el.innerHTML = `
+      <div class="etapa-header">
+        <div class="etapa-emoji">${etapa.emoji}</div>
+        <div class="etapa-title"><h3>${etapa.titulo}</h3><p>${etapa.sub}</p></div>
+        <span class="etapa-badge ${bClass}">${bText}</span>
+        <span class="etapa-chevron">▾</span>
+      </div>
+      <div class="etapa-body">
+        <ul class="ind-list">
+          ${inds.map(ind=>{
+            const done=!!ckState[ind.id];
+            const [tCls,tTxt]=ckTagLabel(ind.status);
+            return `<li class="ind-item ${done?'done':''}" data-id="${ind.id}">
+              <div class="ind-check ${done?'checked':''}"></div>
+              <div class="ind-content">
+                <div class="ind-name">${ind.nome}</div>
+                <div class="ind-meta">
+                  <span class="tag ${tCls}">${tTxt}</span>
+                  <span class="ind-fonte">${ind.fonte}</span>
+                </div>
+              </div>
+            </li>`;
+          }).join('')}
+        </ul>
+      </div>`;
+    el.querySelector('.etapa-header').addEventListener('click',()=>el.classList.toggle('open'));
+    el.querySelectorAll('.ind-item').forEach(li=>{
+      li.querySelector('.ind-check').addEventListener('click',e=>{
+        e.stopPropagation();
+        ckState[li.dataset.id]=!ckState[li.dataset.id];
+        ckSaveState(ckState); ckRender(); ckUpdateProgress();
+      });
+    });
+    container.appendChild(el);
+  });
+  ckUpdateProgress();
+}
+
+function ckFiltrar(btn){
+  document.querySelectorAll('.ck-filter').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); ckFilter=btn.dataset.filter; ckRender();
+}
+
+/* ════════════════════════════════════════
+   INIT
+════════════════════════════════════════ */
+window.addEventListener('load',()=>{
+  initDashboard();
+  ckRender();
+});
+window.addEventListener('resize',()=>{ if(dadosCanais.length) renderGrafico(); });
+</script>
+</body>
+</html>
