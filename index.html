@@ -202,8 +202,8 @@ tr.es-sel td{background:var(--border)}
 <nav class="topbar">
   <div class="topbar-brand">KABAK</div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="goTab('fluxo',this)">📊 Fluxo de Caixa</button>
-    <button class="nav-tab" onclick="goTab('es',this)">⇅ Entradas e saídas</button>
+    <button class="nav-tab active" onclick="goTab('es',this)">⇅ Fluxo de caixa</button>
+    <button class="nav-tab" onclick="goTab('fluxo',this)">📊 Faturamento</button>
     <button class="nav-tab" onclick="goTab('caixa',this)">🧾 Caixa do dia</button>
     <button class="nav-tab" onclick="goTab('canais',this)">🏪 Canais</button>
     <button class="nav-tab" onclick="goTab('site',this)">🛒 Site</button>
@@ -215,11 +215,11 @@ tr.es-sel td{background:var(--border)}
 <!-- ══════════════════════════════════════
      ABA 1 — FLUXO DE CAIXA
 ══════════════════════════════════════ -->
-<div class="tab-panel active" id="tab-fluxo">
+<div class="tab-panel" id="tab-fluxo">
   <div class="ph">
     <div class="ph-left">
-      <span class="eyebrow">Kabak · Dashboard Financeiro</span>
-      <h1 class="ph-title">Fluxo de Caixa</h1>
+      <span class="eyebrow">Kabak · Vendas</span>
+      <h1 class="ph-title">Faturamento</h1>
       <p class="ph-sub" id="fluxo-sub">Carregando…</p>
     </div>
     <span class="badge-live"><span class="dot"></span> Ao vivo</span>
@@ -261,12 +261,12 @@ tr.es-sel td{background:var(--border)}
 <!-- ══════════════════════════════════════
      ABA 2 — CANAIS
 ══════════════════════════════════════ -->
-<div class="tab-panel" id="tab-es">
+<div class="tab-panel active" id="tab-es">
   <div class="ph">
     <div class="ph-left">
-      <span class="eyebrow">Financeiro · Fluxo de caixa</span>
-      <h1 class="ph-title">Entradas e saídas</h1>
-      <p class="ph-sub">Diário e consolidado · aportes separados do caixa operacional</p>
+      <span class="eyebrow">Financeiro</span>
+      <h1 class="ph-title">Fluxo de caixa</h1>
+      <p class="ph-sub">Realizado e projetado · operação separada dos aportes</p>
     </div>
     <span class="badge-live" id="es-badge"><span class="dot"></span> Ao vivo</span>
   </div>
@@ -285,8 +285,8 @@ tr.es-sel td{background:var(--border)}
   </div>
   <div class="kpi-grid" id="es-kpis"><div class="loading"><span class="spinner"></span></div></div>
   <div class="section">
-    <div class="section-hd"><div><div class="section-title">Entradas × saídas por dia</div><div class="section-sub" id="es-chart-sub"></div></div>
-      <div class="es-leg"><span><i style="background:var(--pos)"></i>Entradas</span><span><i style="background:var(--neg)"></i>Saídas</span></div></div>
+    <div class="section-hd"><div><div class="section-title">Fluxo diário e saldo</div><div class="section-sub" id="es-chart-sub"></div></div>
+      <div class="es-leg"><span><i style="background:var(--pos)"></i>Entradas</span><span><i style="background:#3b6ea5"></i>Aportes</span><span><i style="background:var(--neg)"></i>Saídas</span><span><i style="background:var(--neg);opacity:.35"></i>A pagar</span><span><svg width="22" height="8" style="vertical-align:middle;margin-right:5px"><line x1="0" y1="4" x2="22" y2="4" stroke="currentColor" stroke-width="2"/></svg>Saldo</span></div></div>
     <canvas id="es-chart"></canvas>
   </div>
   <div class="two-col">
@@ -314,7 +314,7 @@ tr.es-sel td{background:var(--border)}
     <div class="table-wrap" id="es-lojas-tab"></div>
   </div>
   <div class="section">
-    <div class="section-hd"><div><div class="section-title">Aportes</div><div class="section-sub">Fora do caixa operacional — não somam nas entradas acima</div></div></div>
+    <div class="section-hd"><div><div class="section-title">Aportes</div><div class="section-sub">Entram no saldo, mas não no resultado da operação</div></div></div>
     <div class="table-wrap" id="es-aportes"></div>
   </div>
   <p class="cx-nota" id="es-nota"></p>
@@ -848,8 +848,7 @@ function renderFluxo(){
     <div class="kpi"><span class="kpi-label">Pedidos</span><span class="kpi-value">${peds.toLocaleString('pt-BR')}</span><span class="kpi-sub">ticket médio ${brl2(tick)}</span></div>
     <div class="kpi"><span class="kpi-label">Canal Líder</span><span class="kpi-value" style="font-size:16px">${top?top.c:'—'}</span><span class="kpi-sub">${top?brl(top.t):''}</span></div>
     <div class="kpi"><span class="kpi-label">Vendas Site (líq.)</span><span class="kpi-value">${brl(shopLiq)}</span><span class="kpi-sub">vendas líquidas do site</span></div>
-    <div class="kpi" style="border-left:3px solid var(--neg)"><span class="kpi-label">Custos Fixos</span><span class="kpi-value">${brl(CUSTOS_FIXOS_TOTAL_CALC)}</span><span class="kpi-sub">3 lojas · ${CUSTOS_FIXOS_ITEMS.length} lançamentos</span></div>
-    <div class="kpi" style="border-left:3px solid ${(tot-CUSTOS_FIXOS_TOTAL_CALC)>=0?'var(--pos)':'var(--neg)'}"><span class="kpi-label">Resultado Líquido</span><span class="kpi-value" style="color:${(tot-CUSTOS_FIXOS_TOTAL_CALC)>=0?'var(--pos)':'var(--neg)'}">${brl(tot-CUSTOS_FIXOS_TOTAL_CALC)}</span><span class="kpi-sub">faturamento − custos fixos</span></div>`;
+    <div class="kpi" style="border-left:3px solid var(--neg)"><span class="kpi-label">Custos Fixos</span><span class="kpi-value">${brl(CUSTOS_FIXOS_TOTAL_CALC)}</span><span class="kpi-sub">3 lojas · ${CUSTOS_FIXOS_ITEMS.length} lançamentos</span></div>`;
 
   // gráfico evolução — por dia quando mês filtrado, por mês quando "todos"
   const isFiltF = mesState.fluxo!=='todos';
@@ -1404,9 +1403,10 @@ function esLojaDe(desc){
 }
 function esLerContas(rows){
   const k = r => { const n={}; for(const c in r) n[esSemAcento(c)] = r[c]; return n; };
-  const lanc=[], aportes=[], aPagar=[], porFora=[];
+  const lanc=[], aportes=[], aPagar=[], porFora=[]; let saldoIni=null;
   rows.map(k).forEach(r=>{
     const desc=(r['pagamento']||'').trim(); if(!desc || /^total$/i.test(desc)) return;
+    if(/saldo inicial/i.test(desc)){ const v=parseFloat(normNum(r['entrada']))||parseFloat(normNum(r['valor']))||0; saldoIni={data:normData(r['data vencimento'])||normData(r['data pagamento']), valor:v}; return; }
     const venc=normData(r['data vencimento']), pagRaw=(r['data pagamento']||'').trim(), pag=normData(pagRaw);
     const ehData=/^\d{4}-\d{2}-\d{2}$/.test(pag);
     const entrada=parseFloat(normNum(r['entrada']))||0;
@@ -1422,7 +1422,7 @@ function esLerContas(rows){
     if(ehData && !copiada) lanc.push({data:pag, tipo:'saida', categoria:cat, loja, descricao:desc, valor});
     else aPagar.push({data:venc, categoria:cat, loja, descricao:desc, valor, obs: copiada?'data de pagamento parece copiada do mês anterior':''});
   });
-  return {lanc, aportes, aPagar, porFora};
+  return {lanc, aportes, aPagar, porFora, saldoIni};
 }
 
 async function esAba(nome, colsObrigatorias){
@@ -1451,7 +1451,7 @@ async function esCarregar(){
   ES.contas = null; ES.aPagar=[]; ES.porFora=[];
   if(ct && ct.length){
     const c = esLerContas(ct);
-    ES.contas = c.lanc; ES.aPagar = c.aPagar; ES.porFora = c.porFora;
+    ES.contas = c.lanc; ES.aPagar = c.aPagar; ES.porFora = c.porFora; ES.saldoIni = c.saldoIni;
     if(c.aportes.length){ ES.aportes = [...c.aportes, ...ES.aportes]; ES.aportesOk = true; }
   }
 }
@@ -1490,28 +1490,45 @@ function esSet(k, btn){
   esState.dia=null; renderES();
 }
 
-function esChart(labels, ent, sai, h=230){
+function esChart(lin, h=280){
   const s=setupCanvas('es-chart',h); if(!s) return;
-  const {ctx,W,H}=s, pad={top:24,right:12,bottom:34,left:72};
+  const {ctx,W,H}=s, pad={top:18,right:14,bottom:30,left:78};
   const cW=W-pad.left-pad.right, cH=H-pad.top-pad.bottom;
-  const max=Math.max(1,...ent,...sai);
-  const tick=Math.max(500,Math.ceil(max/4/500)*500);
   ctx.clearRect(0,0,W,H);
-  for(let v=0; v<=max+tick; v+=tick){
-    const y=pad.top+cH-(v/max)*cH; if(y<pad.top-2) break;
-    ctx.beginPath();ctx.strokeStyle=tok('--border');ctx.setLineDash([3,3]);ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle=tok('--text3');ctx.font='10px Inter,sans-serif';ctx.textAlign='right';ctx.fillText(brl(v).replace('R$ ','R$\xa0'),pad.left-5,y+3);
+  if(!lin.length) return;
+  const hi=Math.max(0,...lin.map(l=>l.e+l.a),...lin.map(l=>l.acc));
+  const lo=Math.min(0,...lin.map(l=>-(l.s+l.p)),...lin.map(l=>l.acc));
+  const span=(hi-lo)||1, Y=v=>pad.top+(hi-v)/span*cH;
+  const step=[1e3,2e3,5e3,1e4,2e4,5e4,1e5,2e5,5e5].find(t=>span/t<=6)||1e6;
+  ctx.font='10px Inter,sans-serif';ctx.textAlign='right';
+  for(let v=Math.ceil(lo/step)*step; v<=hi; v+=step){
+    const y=Y(v); ctx.beginPath();ctx.strokeStyle=v===0?tok('--text3'):tok('--border');ctx.setLineDash(v===0?[]:[3,3]);
+    ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=tok('--text3');ctx.fillText(brl(v).replace('R$ ','R$\xa0'),pad.left-6,y+3);
   }
-  const gW=cW/Math.max(1,labels.length), bW=Math.min(gW*0.34,26);
-  const skip=labels.length>20?4:labels.length>12?2:1;
-  labels.forEach((l,i)=>{
-    const cx=pad.left+i*gW+gW/2;
-    [[ent[i],tok('--pos'),-1],[sai[i],tok('--neg'),1]].forEach(([v,c,side])=>{
-      if(!v) return; const bh=(v/max)*cH; ctx.fillStyle=c;
-      ctx.fillRect(side<0?cx-bW-1:cx+1, pad.top+cH-bh, bW, bh);
-    });
-    if(i%skip===0){ctx.fillStyle=tok('--text3');ctx.font='10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText(l,cx,pad.top+cH+18);}
+  const hoje=esHoje(), gW=cW/lin.length, bW=Math.max(3,Math.min(gW*0.6,26)), X=i=>pad.left+i*gW+gW/2;
+  const pos=tok('--pos'), neg=tok('--neg'), apo='#3b6ea5';
+  lin.forEach((l,i)=>{
+    const x=X(i)-bW/2; let y0=Y(0);
+    if(l.e){const y=Y(l.e);ctx.fillStyle=pos;ctx.fillRect(x,y,bW,y0-y);y0=y;}
+    if(l.a){const y=Y(l.e+l.a);ctx.fillStyle=apo;ctx.fillRect(x,y,bW,y0-y);}
+    let z=Y(0);
+    if(l.s){const y=Y(-l.s);ctx.fillStyle=neg;ctx.fillRect(x,z,bW,y-z);z=y;}
+    if(l.p){const y=Y(-(l.s+l.p));ctx.globalAlpha=.35;ctx.fillStyle=neg;ctx.fillRect(x,z,bW,y-z);ctx.globalAlpha=1;}
   });
+  // linha de saldo: cheia até hoje, tracejada depois
+  ctx.lineWidth=2.5;ctx.strokeStyle=tok('--text');
+  for(let i=1;i<lin.length;i++){
+    ctx.beginPath();ctx.setLineDash(lin[i].d>hoje||lin[i].p&&!lin[i].e&&!lin[i].s&&!lin[i].a?[6,5]:[]);
+    ctx.moveTo(X(i-1),Y(lin[i-1].acc));ctx.lineTo(X(i),Y(lin[i].acc));ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  lin.forEach((l,i)=>{ctx.beginPath();ctx.arc(X(i),Y(l.acc),2.5,0,Math.PI*2);ctx.fillStyle=l.acc<0?neg:tok('--text');ctx.fill();});
+  const last=lin[lin.length-1]; ctx.fillStyle=last.acc<0?neg:tok('--text');ctx.font='bold 10px Inter,sans-serif';ctx.textAlign='right';
+  ctx.fillText(brl(last.acc),X(lin.length-1),Y(last.acc)-8);
+  const skip=Math.ceil(lin.length/14);
+  ctx.fillStyle=tok('--text3');ctx.font='10px Inter,sans-serif';ctx.textAlign='center';
+  lin.forEach((l,i)=>{ if(i%skip===0||i===lin.length-1) ctx.fillText(l.d.slice(8,10)+'/'+l.d.slice(5,7),X(i),H-10); });
 }
 
 function renderES(){
@@ -1536,7 +1553,8 @@ function renderES(){
   document.getElementById('es-badge').innerHTML = av.length?'Exemplo':'<span class="dot"></span> Ao vivo';
 
   // filtros de mês e loja (montados a partir dos dados)
-  const todosDias=[...ent,...saidas].map(r=>r.data).filter(Boolean);
+  const hojeM=esHoje();
+  const todosDias=[...ent,...saidas,...ES.aportes,...(temContas?ES.aPagar:[])].map(r=>r.data&&r.data<hojeM&&ES.aPagar.includes(r)?hojeM:r.data).filter(Boolean);
   const meses=[...new Set(todosDias.map(d=>d.slice(0,7)))].sort();
   const lojas=[...new Set([...ent,...saidas].map(r=>r.loja).filter(Boolean))].sort();
   const nomeMes=m=>new Date(m+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
@@ -1550,44 +1568,72 @@ function renderES(){
   const futuro=E.filter(r=>r.data>hoje), tFut=soma(futuro), tRec=soma(R);
   const ret=S.filter(r=>/retirada/i.test(r.categoria));
 
-  document.getElementById('es-kpis').innerHTML=`
-    <div class="kpi"><span class="kpi-label">Entradas</span><span class="kpi-value es-pos">${brl2(tE)}</span><span class="kpi-sub">${tFut?`${brl2(tFut)} ainda vão cair`:'todas já caíram'}</span></div>
-    <div class="kpi"><span class="kpi-label">Saídas</span><span class="kpi-value es-neg">${brl2(tS)}</span><span class="kpi-sub">${ret.length?`${brl2(soma(ret))} em retiradas do caixa`:S.length+' lançamentos'}</span></div>
-    <div class="kpi"><span class="kpi-label">Saldo do período</span><span class="kpi-value ${tE-tS<0?'es-neg':''}">${brl2(tE-tS)}</span><span class="kpi-sub">entradas − saídas, sem aportes</span></div>
-    ${temContas
-      ? (()=>{const AP=ES.aPagar.filter(r=>esState.mes==='todos'||(r.data||'').startsWith(esState.mes));return `<div class="kpi"><span class="kpi-label">A pagar</span><span class="kpi-value">${brl2(soma(AP))}</span><span class="kpi-sub">${AP.length} contas em aberto</span></div>`})()
-      : `<div class="kpi"><span class="kpi-label">A receber · crediário</span><span class="kpi-value">${brl2(tRec)}</span><span class="kpi-sub">venda sem dinheiro ainda</span></div>`}`;
+  // ── fluxo de caixa: realizado + aportes + projetado (a pagar por vencimento)
+  const todasLojas = esState.loja==='todas';
+  const noMes = d => esState.mes==='todos' || (d||'').startsWith(esState.mes);
+  const aportesFlux = todasLojas ? ES.aportes.map(r=>({data:r.data, valor:parseFloat(r.valor)||0, descricao:r.descricao||r.origem||'Aporte'})) : [];
+  const prev = (temContas ? ES.aPagar : []).filter(r=>todasLojas||r.loja===esState.loja)
+      .map(r=>({...r, dataOrig:r.data, data: r.data && r.data>=hoje ? r.data : hoje, vencida: !r.data || r.data<hoje}));
+  const saldoIni = todasLojas ? (ES.saldoIni?.valor||0) : 0;
+  const temSaldoIni = todasLojas && !!ES.saldoIni;
+  // saldo no início do período = saldo inicial + tudo que aconteceu antes do mês filtrado
+  const antes = d => esState.mes!=='todos' && (d||'') < esState.mes;
+  const entL=ent.filter(r=>todasLojas||r.loja===esState.loja), saiL=saidas.filter(r=>todasLojas||r.loja===esState.loja);
+  const abertura = saldoIni + soma(entL.filter(r=>antes(r.data))) + soma(aportesFlux.filter(r=>antes(r.data))) - soma(saiL.filter(r=>antes(r.data))) - soma(prev.filter(r=>antes(r.data)));
+  const Ap = aportesFlux.filter(r=>noMes(r.data)), P = prev.filter(r=>noMes(r.data));
+  const tA=soma(Ap), tP=soma(P), resOp=tE-tS;
+  const saldoAtual = abertura + resOp + tA;
+  const saldoProj  = saldoAtual - tP;
 
-  // diário
-  const dias=[...new Set([...E,...S].map(r=>r.data))].sort();
-  const eD=dias.map(d=>soma(E.filter(r=>r.data===d))), sD=dias.map(d=>soma(S.filter(r=>r.data===d)));
-  document.getElementById('es-chart-sub').textContent = temContas ? 'Pela data de pagamento na aba contas' : esState.base==='caixa'
-    ? `Pela data em que o dinheiro entra · crédito ${esState.cred==='antecipado'?'antecipado em D+1 útil':'sem antecipação, 30 dias por parcela'}`
-    : 'Pela data da venda';
-  esChart(dias.map(d=>d.slice(8,10)+'/'+d.slice(5,7)), eD, sD);
+  const kpi=(l,v,sub,cls='')=>`<div class="kpi"><span class="kpi-label">${l}</span><span class="kpi-value ${cls}">${brl2(v)}</span><span class="kpi-sub">${sub}</span></div>`;
+  document.getElementById('es-kpis').innerHTML =
+      kpi(esState.mes==='todos'?'Saldo inicial':'Saldo no início do mês', abertura, !todasLojas?'filtro por loja parte do zero':temSaldoIni?`conta da Kabak em ${ES.saldoIni.data?ES.saldoIni.data.split('-').reverse().join('/'):'—'}`:'<span style="color:var(--warn)">falta a linha SALDO INICIAL na aba contas</span>')
+    + kpi('Entradas da operação', tE, temContas?'site + Pix e cartão das lojas':(tFut?`${brl2(tFut)} ainda vão cair`:'todas já caíram'), 'es-pos')
+    + kpi('Saídas pagas', tS, `${S.length} lançamentos`, 'es-neg')
+    + kpi('Resultado da operação', resOp, 'entradas − saídas, sem aportes', resOp<0?'es-neg':'')
+    + (todasLojas?kpi('Aportes', tA, `${Ap.length} entradas de sócio`):'')
+    + kpi(esState.mes==='todos'||esState.mes===hoje.slice(0,7)?'Saldo atual':'Saldo antes das contas', saldoAtual, 'início + operação + aportes', saldoAtual<0?'es-neg':'')
+    + (temContas?kpi('A pagar', tP, `${P.length} contas${P.some(r=>r.vencida)?` · ${P.filter(r=>r.vencida).length} vencidas`:''}`):kpi('A receber · crediário', tRec, 'venda sem dinheiro ainda'))
+    + (temContas?kpi('Saldo projetado', saldoProj, 'depois de pagar o que está em aberto', saldoProj<0?'es-neg':''):'');
 
-  let acc=0;
-  const linhas=dias.map((d,i)=>{acc+=eD[i]-sD[i];return {d,e:eD[i],s:sD[i],sal:eD[i]-sD[i],acc};});
+  // série diária
+  const dias=[...new Set([...E,...S,...Ap,...P].map(r=>r.data).filter(Boolean))].sort();
+  const lin=[]; let acc=abertura;
+  dias.forEach(d=>{
+    const e=soma(E.filter(r=>r.data===d)), s=soma(S.filter(r=>r.data===d)), a=soma(Ap.filter(r=>r.data===d)), pp=soma(P.filter(r=>r.data===d));
+    acc += e + a - s - pp;
+    lin.push({d, e, a, s, p:pp, dia:e+a-s-pp, acc, proj: d>hoje || pp>0 && e+a+s===0});
+  });
+  document.getElementById('es-chart-sub').textContent = temContas
+    ? 'Realizado pela data de pagamento · a pagar pela data de vencimento (vencidas contam hoje)'
+    : esState.base==='caixa' ? `Pela data em que o dinheiro entra · crédito ${esState.cred==='antecipado'?'antecipado em D+1 útil':'sem antecipação, 30 dias por parcela'}` : 'Pela data da venda';
+  esChart(lin);
+
   if(!esState.dia || !dias.includes(esState.dia)) esState.dia = [...dias].reverse().find(d=>d<=hoje) || dias[dias.length-1] || null;
   const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+  const v0=v=>v?brl2(v):'—';
   document.getElementById('es-diario').innerHTML = dias.length ? `<table>
-    <thead><tr><th>Dia</th><th class="r">Entradas</th><th class="r">Saídas</th><th class="r">Saldo</th><th class="r">Acumulado</th></tr></thead>
-    <tbody>${linhas.map(l=>`<tr class="${l.d===esState.dia?'es-sel':''}" style="cursor:pointer" onclick="esState.dia='${l.d}';renderES()">
-      <td>${fmtD(l.d)}${l.d>hoje?' <small style="color:var(--text3)">previsto</small>':''}</td><td class="r">${brl2(l.e)}</td><td class="r">${l.s?brl2(l.s):'—'}</td>
-      <td class="r ${l.sal<0?'es-neg':''}">${brl2(l.sal)}</td><td class="r"><strong>${brl2(l.acc)}</strong></td></tr>`).join('')}</tbody>
-    <tfoot><tr><td>Total</td><td class="r">${brl2(tE)}</td><td class="r">${brl2(tS)}</td><td class="r">${brl2(tE-tS)}</td><td></td></tr></tfoot></table>`
+    <thead><tr><th>Dia</th><th class="r">Entradas</th>${todasLojas?'<th class="r">Aportes</th>':''}<th class="r">Saídas</th>${temContas?'<th class="r">A pagar</th>':''}<th class="r">Saldo</th></tr></thead>
+    <tbody><tr class="cx-sub"><td>Saldo no início</td><td></td>${todasLojas?'<td></td>':''}<td></td>${temContas?'<td></td>':''}<td class="r"><strong>${brl2(abertura)}</strong></td></tr>
+    ${lin.map(l=>`<tr class="${l.d===esState.dia?'es-sel':''}" style="cursor:pointer;${l.d>hoje?'font-style:italic;color:var(--text2)':''}" onclick="esState.dia='${l.d}';renderES()">
+      <td>${fmtD(l.d)}${l.d>hoje?' <small style="color:var(--text3)">previsto</small>':l.d===hoje?' <small style="color:var(--text3)">hoje</small>':''}</td>
+      <td class="r">${v0(l.e)}</td>${todasLojas?`<td class="r">${v0(l.a)}</td>`:''}<td class="r">${l.s?'−'+brl2(l.s):'—'}</td>${temContas?`<td class="r">${l.p?'−'+brl2(l.p):'—'}</td>`:''}
+      <td class="r ${l.acc<0?'es-neg':''}"><strong>${brl2(l.acc)}</strong></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="r">${brl2(tE)}</td>${todasLojas?`<td class="r">${brl2(tA)}</td>`:''}<td class="r">−${brl2(tS)}</td>${temContas?`<td class="r">−${brl2(tP)}</td>`:''}<td class="r">${brl2(temContas?saldoProj:saldoAtual)}</td></tr></tfoot></table>`
     : '<p class="cx-nota">Sem movimento no filtro escolhido.</p>';
 
   // detalhe do dia
-  const dE=E.filter(r=>r.data===esState.dia), dS=S.filter(r=>r.data===esState.dia);
+  const dE=E.filter(r=>r.data===esState.dia), dS=S.filter(r=>r.data===esState.dia), dA=Ap.filter(r=>r.data===esState.dia), dP=P.filter(r=>r.data===esState.dia);
   document.getElementById('es-det-tit').textContent = esState.dia ? `Lançamentos de ${fmtD(esState.dia)}` : 'Lançamentos do dia';
   document.getElementById('es-det-sub').textContent = (!temContas && esState.base==='caixa') ? 'Venda de outro dia aparece com a data da venda' : '';
   const agr={}; dE.forEach(r=>{const k=`${r.loja}|${r.forma}|${r.venda&&r.venda!==r.data?r.venda:''}|${r.descricao||''}`;agr[k]=(agr[k]||0)+r.valor;});
   document.getElementById('es-detalhe').innerHTML = esState.dia ? `<table>
     <thead><tr><th>Tipo</th><th>Loja</th><th>Forma / categoria</th><th class="r">Valor</th></tr></thead>
     <tbody>${Object.entries(agr).map(([k,v])=>{const[l,f,vd,ds]=k.split('|');return `<tr><td class="es-pos">Entrada</td><td>${l}</td><td>${f}${vd?` <small style="color:var(--text3)">venda de ${vd.slice(8,10)}/${vd.slice(5,7)}</small>`:''}${ds?` <small style="color:var(--text3)">${ds}</small>`:''}</td><td class="r">${brl2(v)}</td></tr>`}).join('')}
+    ${dA.map(r=>`<tr><td style="color:#3b6ea5">Aporte</td><td>—</td><td>${r.descricao}</td><td class="r">${brl2(r.valor)}</td></tr>`).join('')}
+    ${dP.map(r=>`<tr style="font-style:italic"><td class="es-neg">A pagar</td><td>${r.loja||'Geral'}</td><td>${r.categoria} <small style="color:var(--text3)">${r.descricao}${r.vencida?` · vencida ${r.dataOrig?r.dataOrig.split('-').reverse().join('/'):''}`:''}</small></td><td class="r">−${brl2(r.valor)}</td></tr>`).join('')}
     ${dS.map(r=>`<tr><td class="es-neg">Saída</td><td>${r.loja}</td><td>${r.categoria}${r.descricao?` <small style="color:var(--text3)">${r.descricao}</small>`:''}</td><td class="r">−${brl2(r.valor)}</td></tr>`).join('')}</tbody>
-    <tfoot><tr><td colspan="3">Saldo do dia</td><td class="r">${brl2(soma(dE)-soma(dS))}</td></tr></tfoot></table>` : '';
+    <tfoot><tr><td colspan="3">Resultado do dia</td><td class="r">${brl2(soma(dE)+soma(dA)-soma(dS)-soma(dP))}</td></tr></tfoot></table>` : '';
 
   document.getElementById('es-formas-sub').textContent = temContas ? 'Repasse do site, Pix e cartão das lojas' : 'Crediário fica fora: é a receber';
   document.getElementById('es-cats-sub').textContent  = temContas ? 'Contas pagas no período · aportes fora' : 'Inclui as sangrias do caixa das lojas';
@@ -1610,7 +1656,7 @@ function renderES(){
   if(temContas){
     const AP=[...ES.aPagar].filter(r=>esState.mes==='todos'||(r.data||'').startsWith(esState.mes)).sort((a,b)=>(a.data||'').localeCompare(b.data||''));
     const PF=ES.porFora.filter(r=>esState.mes==='todos'||(r.data||'').startsWith(esState.mes));
-    apHtml = `<div class="section"><div class="section-hd"><div><div class="section-title">Contas a pagar</div><div class="section-sub">Sem data de pagamento na planilha · não entram no saldo</div></div></div>
+    apHtml = `<div class="section"><div class="section-hd"><div><div class="section-title">Contas a pagar</div><div class="section-sub">Sem data de pagamento · entram no saldo projetado pela data de vencimento</div></div></div>
       <div class="table-wrap">${AP.length?`<table><thead><tr><th>Vencimento</th><th>Conta</th><th>Categoria</th><th class="r">Valor</th></tr></thead>
       <tbody>${AP.map(r=>`<tr><td>${r.data?r.data.split('-').reverse().join('/'):''}${r.data&&r.data<hoje?' <small class="es-neg">vencida</small>':''}</td><td>${r.descricao}${r.obs?`<br><small style="color:var(--warn)">${r.obs}</small>`:''}</td><td>${r.categoria}</td><td class="r">${brl2(r.valor)}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td colspan="3">Total</td><td class="r">${brl2(soma(AP))}</td></tr></tfoot></table>`:'<p class="cx-nota">Nenhuma conta em aberto no filtro.</p>'}
@@ -1630,7 +1676,7 @@ function renderES(){
       <tfoot>${Object.entries(porTipo).map(([t,v])=>`<tr><td colspan="4">Total ${t}</td><td class="r">${brl2(v)}</td></tr>`).join('')}</tfoot></table>`;
 
   document.getElementById('es-nota').innerHTML = temContas
-    ? 'Fonte: aba <b>contas</b> (controle de contas da Kabak). Entradas e saídas pela data de pagamento; sem data = a pagar; "EXPIRADO" não entra; "JEAN FEZ" fica fora do saldo. Aportes aparecem só na tabela de aportes. Venda em dinheiro que não é depositada não aparece aqui — ver sangrias no Caixa do dia.'
+    ? 'Fonte: aba <b>contas</b> (controle de contas da Kabak). Entradas e saídas pela data de pagamento; sem data = a pagar; "EXPIRADO" não entra; "JEAN FEZ" fica fora do saldo. Aportes somam no saldo, fora do resultado da operação. Contas sem data de pagamento entram como a pagar na data de vencimento (vencidas contam hoje). Para o saldo partir do valor real da conta, inclua uma linha SALDO INICIAL (valor na coluna ENTRADA). Venda em dinheiro que não é depositada não aparece aqui — ver sangrias no Caixa do dia.'
     : 'Prazos usados: dinheiro e Pix no mesmo dia; débito no dia útil seguinte (feriado não considerado); crédito conforme o botão acima (confirmar o contrato da maquininha); crediário fica em "a receber". As entradas das lojas são venda registrada no PDV — o dinheiro conferido depende do fechamento de caixa com valor informado. Site e Shopee entram pela aba lancamentos, como "entrada", no dia do repasse.';
 }
 
@@ -1992,7 +2038,7 @@ async function init(){
 
     await esCarregar();
     loaded=true;
-    renderFluxo();
+    renderES();
     ckRender();
   }catch(e){
     // Mesmo com erro inesperado, tenta renderizar com dados vazios
