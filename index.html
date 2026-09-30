@@ -182,6 +182,19 @@ tfoot td.r{text-align:right;font-family:'JetBrains Mono',monospace}
   .kpi-value{font-size:18px}
   .nav-tab{padding:0 10px;font-size:12px}
 }
+.cx-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cx-date{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)}
+.cx-nota{font-size:12px;color:var(--text2);line-height:1.5;margin:4px 0 24px;max-width:820px}
+.cx-sub td{color:var(--text2);font-size:12px}
+.cx-sub td:first-child{padding-left:28px}
+.es-bar{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.es-grp{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.es-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-right:4px}
+.es-leg{display:flex;gap:14px;font-size:12px;color:var(--text2)}
+.es-leg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.es-aviso{background:var(--warn-bg);color:var(--warn);border-radius:6px;padding:10px 14px;font-size:12.5px;line-height:1.5;margin-bottom:12px}
+tr.es-sel td{background:var(--border)}
+.es-neg{color:var(--neg)} .es-pos{color:var(--pos)}
 </style>
 </head>
 <body>
@@ -190,6 +203,8 @@ tfoot td.r{text-align:right;font-family:'JetBrains Mono',monospace}
   <div class="topbar-brand">KABAK</div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="goTab('fluxo',this)">📊 Fluxo de Caixa</button>
+    <button class="nav-tab" onclick="goTab('es',this)">⇅ Entradas e saídas</button>
+    <button class="nav-tab" onclick="goTab('caixa',this)">🧾 Caixa do dia</button>
     <button class="nav-tab" onclick="goTab('canais',this)">🏪 Canais</button>
     <button class="nav-tab" onclick="goTab('site',this)">🛒 Site</button>
     <button class="nav-tab" onclick="goTab('pagamentos',this)">💳 Pagamentos</button>
@@ -245,6 +260,94 @@ tfoot td.r{text-align:right;font-family:'JetBrains Mono',monospace}
 
 <!-- ══════════════════════════════════════
      ABA 2 — CANAIS
+══════════════════════════════════════ -->
+<div class="tab-panel" id="tab-es">
+  <div class="ph">
+    <div class="ph-left">
+      <span class="eyebrow">Financeiro · Fluxo de caixa</span>
+      <h1 class="ph-title">Entradas e saídas</h1>
+      <p class="ph-sub">Diário e consolidado · aportes separados do caixa operacional</p>
+    </div>
+    <span class="badge-live" id="es-badge"><span class="dot"></span> Ao vivo</span>
+  </div>
+  <div id="es-aviso"></div>
+  <div class="filter-bar es-bar">
+    <div class="es-grp"><span class="es-lbl">Data</span>
+      <button class="pill active" data-base="caixa" onclick="esSet('base',this)">Dia em que o dinheiro entra</button>
+      <button class="pill" data-base="venda" onclick="esSet('base',this)">Dia da venda</button></div>
+    <div class="es-grp"><span class="es-lbl">Crédito</span>
+      <button class="pill active" data-cred="antecipado" onclick="esSet('cred',this)">Antecipado (D+1 útil)</button>
+      <button class="pill" data-cred="parcelado" onclick="esSet('cred',this)">Sem antecipação (30 dias/parcela)</button></div>
+  </div>
+  <div class="filter-bar es-bar">
+    <div class="es-grp" id="es-meses"></div>
+    <div class="es-grp" id="es-lojas"></div>
+  </div>
+  <div class="kpi-grid" id="es-kpis"><div class="loading"><span class="spinner"></span></div></div>
+  <div class="section">
+    <div class="section-hd"><div><div class="section-title">Entradas × saídas por dia</div><div class="section-sub" id="es-chart-sub"></div></div>
+      <div class="es-leg"><span><i style="background:var(--pos)"></i>Entradas</span><span><i style="background:var(--neg)"></i>Saídas</span></div></div>
+    <canvas id="es-chart"></canvas>
+  </div>
+  <div class="two-col">
+    <div class="section">
+      <div class="section-hd"><div><div class="section-title">Diário</div><div class="section-sub">Clique num dia para ver os lançamentos</div></div></div>
+      <div class="table-wrap" id="es-diario"></div>
+    </div>
+    <div class="section">
+      <div class="section-hd"><div><div class="section-title" id="es-det-tit">Lançamentos do dia</div><div class="section-sub" id="es-det-sub"></div></div></div>
+      <div class="table-wrap" id="es-detalhe"></div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="section">
+      <div class="section-hd"><div><div class="section-title">Entradas por forma</div><div class="section-sub">Crediário fica fora: é a receber</div></div></div>
+      <div class="hbar-wrap" id="es-formas"></div>
+    </div>
+    <div class="section">
+      <div class="section-hd"><div><div class="section-title">Saídas por categoria</div><div class="section-sub">Inclui as sangrias do caixa das lojas</div></div></div>
+      <div class="hbar-wrap" id="es-cats"></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-hd"><div><div class="section-title">Consolidado por loja</div><div class="section-sub">Período e filtros selecionados</div></div></div>
+    <div class="table-wrap" id="es-lojas-tab"></div>
+  </div>
+  <div class="section">
+    <div class="section-hd"><div><div class="section-title">Aportes</div><div class="section-sub">Fora do caixa operacional — não somam nas entradas acima</div></div></div>
+    <div class="table-wrap" id="es-aportes"></div>
+  </div>
+  <p class="cx-nota" id="es-nota"></p>
+</div>
+
+<div class="tab-panel" id="tab-caixa">
+  <div class="ph">
+    <div class="ph-left">
+      <span class="eyebrow">Financeiro · Lojas físicas</span>
+      <h1 class="ph-title">Caixa do dia</h1>
+      <p class="ph-sub">Faturamento do dia por loja e quanto entrou em cada forma de pagamento</p>
+    </div>
+    <span class="badge-live"><span class="dot"></span> Ao vivo</span>
+  </div>
+  <div class="filter-bar cx-bar">
+    <button class="pill" onclick="cxPasso(-1)">‹ Dia anterior</button>
+    <input type="date" id="cx-data" class="cx-date" onchange="cxState.data=this.value;renderCaixa()">
+    <button class="pill" onclick="cxPasso(1)">Próximo dia ›</button>
+  </div>
+  <div class="kpi-grid" id="cx-kpis"><div class="loading"><span class="spinner"></span></div></div>
+  <div class="section">
+    <div class="section-hd"><div><div class="section-title">Recebimento por forma de pagamento</div><div class="section-sub">Pedidos atendidos no Bling, por loja · crédito aberto por nº de parcelas</div></div></div>
+    <div class="table-wrap" id="cx-formas"></div>
+  </div>
+  <div class="section">
+    <div class="section-hd"><div><div class="section-title">Últimos 7 dias por loja</div><div class="section-sub">Faturamento do dia, só pedidos que contam como venda</div></div></div>
+    <div class="table-wrap" id="cx-semana"></div>
+  </div>
+  <p class="cx-nota">Venda registrada no Bling, não dinheiro conferido. O recebido de fato sai do fechamento de caixa de cada loja; a diferença só aparece se o fechamento for preenchido. Forma de pagamento só vale nas lojas físicas — no site e na Shopee o Bling marca "Dinheiro".</p>
+</div>
+
+<!-- ══════════════════════════════════════
+     ABA — CANAIS
 ══════════════════════════════════════ -->
 <div class="tab-panel" id="tab-canais">
   <div class="ph">
@@ -523,6 +626,8 @@ function setCanal(btn, aba){
 
 function renderTab(id){
   if(id==='fluxo')     renderFluxo();
+  if(id==='es')        renderES();
+  if(id==='caixa')     renderCaixa();
   if(id==='canais')    renderCanais();
   if(id==='site')      renderSite();
   if(id==='pagamentos')renderPagamentos();
@@ -1253,62 +1358,325 @@ function renderPagamentos(){
 }
 
 
+const ES_EXEMPLO_CAIXA = [{"data": "24/09/2026", "loja": "Cachoeira", "forma": "Débito", "parcelas": "1", "valor": "274,86"}, {"data": "24/09/2026", "loja": "Cachoeira", "forma": "Dinheiro", "parcelas": "1", "valor": "910,11"}, {"data": "24/09/2026", "loja": "Cachoeira", "forma": "Pix", "parcelas": "1", "valor": "478,28"}, {"data": "24/09/2026", "loja": "Cachoeira", "forma": "Crédito", "parcelas": "3", "valor": "402,58"}, {"data": "24/09/2026", "loja": "Cachoeira", "forma": "Crédito", "parcelas": "1", "valor": "105,00"}, {"data": "24/09/2026", "loja": "Santa Rita", "forma": "Débito", "parcelas": "1", "valor": "103,36"}, {"data": "24/09/2026", "loja": "Santa Rita", "forma": "Dinheiro", "parcelas": "1", "valor": "181,49"}, {"data": "24/09/2026", "loja": "Santa Rita", "forma": "Pix", "parcelas": "1", "valor": "1201,52"}, {"data": "24/09/2026", "loja": "Santa Rita", "forma": "Crédito", "parcelas": "2", "valor": "238,79"}, {"data": "24/09/2026", "loja": "Santa Rita", "forma": "Crédito", "parcelas": "1", "valor": "761,36"}, {"data": "25/09/2026", "loja": "Cachoeira", "forma": "Pix", "parcelas": "1", "valor": "1576,25"}, {"data": "25/09/2026", "loja": "Cachoeira", "forma": "Dinheiro", "parcelas": "1", "valor": "109,67"}, {"data": "25/09/2026", "loja": "Cachoeira", "forma": "Crédito", "parcelas": "1", "valor": "559,04"}, {"data": "25/09/2026", "loja": "Cachoeira", "forma": "Crediário", "parcelas": "1", "valor": "181,60"}, {"data": "25/09/2026", "loja": "Cachoeira", "forma": "Débito", "parcelas": "1", "valor": "80,00"}, {"data": "25/09/2026", "loja": "Santa Rita", "forma": "Pix", "parcelas": "1", "valor": "725,53"}, {"data": "25/09/2026", "loja": "Santa Rita", "forma": "Débito", "parcelas": "1", "valor": "217,35"}, {"data": "25/09/2026", "loja": "Santa Rita", "forma": "Dinheiro", "parcelas": "1", "valor": "740,07"}, {"data": "25/09/2026", "loja": "Santa Rita", "forma": "Crédito", "parcelas": "1", "valor": "495,06"}, {"data": "27/09/2026", "loja": "Cachoeira", "forma": "Pix", "parcelas": "1", "valor": "4404,53"}, {"data": "27/09/2026", "loja": "Cachoeira", "forma": "Crediário", "parcelas": "1", "valor": "59,96"}, {"data": "27/09/2026", "loja": "Cachoeira", "forma": "Crédito", "parcelas": "1", "valor": "604,40"}, {"data": "27/09/2026", "loja": "Cachoeira", "forma": "Dinheiro", "parcelas": "1", "valor": "628,26"}, {"data": "27/09/2026", "loja": "Cachoeira", "forma": "Crédito", "parcelas": "3", "valor": "1646,36"}, {"data": "27/09/2026", "loja": "Santa Rita", "forma": "Dinheiro", "parcelas": "1", "valor": "265,05"}, {"data": "27/09/2026", "loja": "Santa Rita", "forma": "Débito", "parcelas": "1", "valor": "423,25"}, {"data": "27/09/2026", "loja": "Santa Rita", "forma": "Crédito", "parcelas": "1", "valor": "386,00"}, {"data": "27/09/2026", "loja": "Santa Rita", "forma": "Crédito", "parcelas": "2", "valor": "208,23"}, {"data": "27/09/2026", "loja": "Santa Rita", "forma": "Pix", "parcelas": "1", "valor": "310,61"}, {"data": "28/09/2026", "loja": "Cachoeira", "forma": "Débito", "parcelas": "1", "valor": "288,22"}, {"data": "28/09/2026", "loja": "Cachoeira", "forma": "Crédito", "parcelas": "1", "valor": "1578,13"}, {"data": "28/09/2026", "loja": "Cachoeira", "forma": "Pix", "parcelas": "1", "valor": "605,59"}, {"data": "28/09/2026", "loja": "Cachoeira", "forma": "Crediário", "parcelas": "1", "valor": "359,88"}, {"data": "28/09/2026", "loja": "Santa Rita", "forma": "Dinheiro", "parcelas": "1", "valor": "555,31"}, {"data": "28/09/2026", "loja": "Santa Rita", "forma": "Pix", "parcelas": "1", "valor": "1475,76"}, {"data": "28/09/2026", "loja": "Santa Rita", "forma": "Crédito", "parcelas": "1", "valor": "310,77"}];
+const ES_EXEMPLO_LANC = [{"data": "24/09/2026", "tipo": "saida", "categoria": "retirada", "loja": "Cachoeira", "descricao": "sangria: dinheiro pro Jean", "valor": "500,00"}, {"data": "24/09/2026", "tipo": "saida", "categoria": "retirada", "loja": "Cachoeira", "descricao": "sangria: dinheiro pro Jean", "valor": "350,00"}, {"data": "25/09/2026", "tipo": "saida", "categoria": "RH", "loja": "Cachoeira", "descricao": "sangria: RH", "valor": "30,00"}, {"data": "27/09/2026", "tipo": "saida", "categoria": "alimentação", "loja": "Cachoeira", "descricao": "sangria: almoço", "valor": "47,00"}, {"data": "27/09/2026", "tipo": "saida", "categoria": "retirada", "loja": "Cachoeira", "descricao": "sangria: dinheiro pro Jean", "valor": "800,00"}, {"data": "27/09/2026", "tipo": "saida", "categoria": "outros", "loja": "Santa Rita", "descricao": "sangria sem observação", "valor": "50,00"}];
+
+/* ══════════════════════════════════════════
+   ABA — ENTRADAS E SAÍDAS
+   Lê as abas "caixa-lojas", "lancamentos" e "aportes" pelo NOME
+   (não precisa de GID). Enquanto "caixa-lojas" e "lancamentos" não
+   existirem, usa os fechamentos de 24–28/09 como exemplo.
+══════════════════════════════════════════ */
+const esState = {base:'caixa', cred:'antecipado', mes:'todos', loja:'todas', dia:null};
+let ES = {caixa:[], lanc:[], aportes:[], exemplo:{caixa:false, lanc:false}, aportesOk:false};
+
+async function esAba(nome, colsObrigatorias){
+  // gviz devolve a 1ª aba quando o nome não existe — por isso confere o cabeçalho
+  try{
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nome)}`;
+    const r = await fetch(url); if(!r.ok) return null;
+    const rows = parseCSVText(await r.text());
+    if(!rows.length) return null;
+    const cols = Object.keys(rows[0]).map(c=>c.trim().toLowerCase());
+    if(!colsObrigatorias.every(c=>cols.includes(c))) return null;
+    return rows.map(o=>{const n={};for(const k in o)n[k.trim().toLowerCase()]=o[k];return n;});
+  }catch(e){ console.warn('esAba', nome, e.message); return null; }
+}
+async function esCarregar(){
+  const [cx, lc, ap] = await Promise.all([
+    esAba('caixa-lojas', ['data','loja','forma','valor']),
+    esAba('lancamentos', ['data','tipo','valor']),
+    esAba('aportes', ['data','valor']),
+  ]);
+  ES.exemplo.caixa = !cx; ES.exemplo.lanc = !lc; ES.aportesOk = !!ap;
+  ES.caixa   = normRows(cx || ES_EXEMPLO_CAIXA, ['data'], ['valor','parcelas']);
+  ES.lanc    = normRows(lc || ES_EXEMPLO_LANC,  ['data'], ['valor']);
+  ES.aportes = normRows(ap || [], ['data'], ['valor']);
+}
+
+const esAddDias = (iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+const esAddUteis = (iso,n)=>{const d=new Date(iso+'T12:00:00');let k=0;while(k<n){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)k++;}return d.toISOString().slice(0,10);};
+const esAddMes  = (iso,n)=>{const d=new Date(iso+'T12:00:00');d.setMonth(d.getMonth()+n);return d.toISOString().slice(0,10);};
+const esHoje = ()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
+
+// transforma a venda do caixa em entradas com a data em que o dinheiro entra
+function esEntradasCaixa(){
+  const out=[], receber=[];
+  ES.caixa.forEach(r=>{
+    const v=parseFloat(r.valor)||0; if(!v||!r.data) return;
+    const f=(r.forma||'').trim(), fl=f.toLowerCase(), p=Math.max(1,parseInt(r.parcelas)||1);
+    const base={loja:r.loja, forma:f, venda:r.data, origem:'Venda loja'};
+    if(/credi[aá]rio/.test(fl)){ receber.push({...base, data:r.data, valor:v}); return; }
+    if(esState.base==='venda'){ out.push({...base, data:r.data, valor:v}); return; }
+    if(/d[eé]bito/.test(fl)) out.push({...base, data:esAddUteis(r.data,1), valor:v});
+    else if(/cr[eé]dito/.test(fl)){
+      if(esState.cred==='antecipado') out.push({...base, data:esAddUteis(r.data,1), valor:v});
+      else for(let k=1;k<=p;k++) out.push({...base, forma:`${f} ${p}x`, data:esAddMes(r.data,k), valor:v/p});
+    }
+    else out.push({...base, data:r.data, valor:v}); // dinheiro, pix e outros: mesmo dia
+  });
+  return {out, receber};
+}
+
+function esSet(k, btn){
+  btn.parentElement.querySelectorAll('.pill').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(k==='base') esState.base=btn.dataset.base;
+  if(k==='cred') esState.cred=btn.dataset.cred;
+  if(k==='mes')  esState.mes=btn.dataset.v;
+  if(k==='loja') esState.loja=btn.dataset.v;
+  esState.dia=null; renderES();
+}
+
+function esChart(labels, ent, sai, h=230){
+  const s=setupCanvas('es-chart',h); if(!s) return;
+  const {ctx,W,H}=s, pad={top:24,right:12,bottom:34,left:72};
+  const cW=W-pad.left-pad.right, cH=H-pad.top-pad.bottom;
+  const max=Math.max(1,...ent,...sai);
+  const tick=Math.max(500,Math.ceil(max/4/500)*500);
+  ctx.clearRect(0,0,W,H);
+  for(let v=0; v<=max+tick; v+=tick){
+    const y=pad.top+cH-(v/max)*cH; if(y<pad.top-2) break;
+    ctx.beginPath();ctx.strokeStyle=tok('--border');ctx.setLineDash([3,3]);ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=tok('--text3');ctx.font='10px Inter,sans-serif';ctx.textAlign='right';ctx.fillText(brl(v).replace('R$ ','R$\xa0'),pad.left-5,y+3);
+  }
+  const gW=cW/Math.max(1,labels.length), bW=Math.min(gW*0.34,26);
+  const skip=labels.length>20?4:labels.length>12?2:1;
+  labels.forEach((l,i)=>{
+    const cx=pad.left+i*gW+gW/2;
+    [[ent[i],tok('--pos'),-1],[sai[i],tok('--neg'),1]].forEach(([v,c,side])=>{
+      if(!v) return; const bh=(v/max)*cH; ctx.fillStyle=c;
+      ctx.fillRect(side<0?cx-bW-1:cx+1, pad.top+cH-bh, bW, bh);
+    });
+    if(i%skip===0){ctx.fillStyle=tok('--text3');ctx.font='10px Inter,sans-serif';ctx.textAlign='center';ctx.fillText(l,cx,pad.top+cH+18);}
+  });
+}
+
+function renderES(){
+  const hoje=esHoje();
+  const {out:entCaixa, receber} = esEntradasCaixa();
+  const lancEnt = ES.lanc.filter(r=>/^entrada/i.test(r.tipo||'')).map(r=>({data:r.data, loja:r.loja||'Geral', forma:r.categoria||'Outras entradas', origem:'Lançamento', descricao:r.descricao||'', valor:parseFloat(r.valor)||0}));
+  const saidas  = ES.lanc.filter(r=>/^sa[ií]da/i.test(r.tipo||'')).map(r=>({data:r.data, loja:r.loja||'Geral', categoria:r.categoria||'Outros', descricao:r.descricao||'', valor:Math.abs(parseFloat(r.valor)||0)}));
+  let ent=[...entCaixa, ...lancEnt];
+
+  // avisos de fonte
+  const av=[];
+  if(ES.exemplo.caixa) av.push('A aba <b>caixa-lojas</b> ainda não existe na planilha: as entradas das lojas são os fechamentos de 24 a 28/09 (exemplo).');
+  if(ES.exemplo.lanc)  av.push('A aba <b>lancamentos</b> ainda não existe: as saídas são só as sangrias desses fechamentos.');
+  document.getElementById('es-aviso').innerHTML = av.length?`<div class="es-aviso">${av.join('<br>')}</div>`:'';
+  document.getElementById('es-badge').innerHTML = av.length?'Exemplo':'<span class="dot"></span> Ao vivo';
+
+  // filtros de mês e loja (montados a partir dos dados)
+  const todosDias=[...ent,...saidas].map(r=>r.data).filter(Boolean);
+  const meses=[...new Set(todosDias.map(d=>d.slice(0,7)))].sort();
+  const lojas=[...new Set([...ent,...saidas].map(r=>r.loja).filter(Boolean))].sort();
+  const nomeMes=m=>new Date(m+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});
+  document.getElementById('es-meses').innerHTML='<span class="es-lbl">Mês</span>'+['todos',...meses].map(m=>`<button class="pill${esState.mes===m?' active':''}" data-v="${m}" onclick="esSet('mes',this)">${m==='todos'?'Todos':nomeMes(m)}</button>`).join('');
+  document.getElementById('es-lojas').innerHTML='<span class="es-lbl">Loja</span>'+['todas',...lojas].map(l=>`<button class="pill${esState.loja===l?' active':''}" data-v="${l}" onclick="esSet('loja',this)">${l==='todas'?'Todas':l}</button>`).join('');
+
+  const fil=a=>a.filter(r=>(esState.mes==='todos'||(r.data||'').startsWith(esState.mes)) && (esState.loja==='todas'||r.loja===esState.loja));
+  const E=fil(ent), S=fil(saidas), R=receber.filter(r=>esState.loja==='todas'||r.loja===esState.loja);
+  const soma=a=>a.reduce((s,r)=>s+r.valor,0);
+  const tE=soma(E), tS=soma(S);
+  const futuro=E.filter(r=>r.data>hoje), tFut=soma(futuro), tRec=soma(R);
+  const ret=S.filter(r=>/retirada/i.test(r.categoria));
+
+  document.getElementById('es-kpis').innerHTML=`
+    <div class="kpi"><span class="kpi-label">Entradas</span><span class="kpi-value es-pos">${brl2(tE)}</span><span class="kpi-sub">${tFut?`${brl2(tFut)} ainda vão cair`:'todas já caíram'}</span></div>
+    <div class="kpi"><span class="kpi-label">Saídas</span><span class="kpi-value es-neg">${brl2(tS)}</span><span class="kpi-sub">${ret.length?`${brl2(soma(ret))} em retiradas do caixa`:S.length+' lançamentos'}</span></div>
+    <div class="kpi"><span class="kpi-label">Saldo do período</span><span class="kpi-value ${tE-tS<0?'es-neg':''}">${brl2(tE-tS)}</span><span class="kpi-sub">entradas − saídas, sem aportes</span></div>
+    <div class="kpi"><span class="kpi-label">A receber · crediário</span><span class="kpi-value">${brl2(tRec)}</span><span class="kpi-sub">venda sem dinheiro ainda</span></div>`;
+
+  // diário
+  const dias=[...new Set([...E,...S].map(r=>r.data))].sort();
+  const eD=dias.map(d=>soma(E.filter(r=>r.data===d))), sD=dias.map(d=>soma(S.filter(r=>r.data===d)));
+  document.getElementById('es-chart-sub').textContent = esState.base==='caixa'
+    ? `Pela data em que o dinheiro entra · crédito ${esState.cred==='antecipado'?'antecipado em D+1 útil':'sem antecipação, 30 dias por parcela'}`
+    : 'Pela data da venda';
+  esChart(dias.map(d=>d.slice(8,10)+'/'+d.slice(5,7)), eD, sD);
+
+  let acc=0;
+  const linhas=dias.map((d,i)=>{acc+=eD[i]-sD[i];return {d,e:eD[i],s:sD[i],sal:eD[i]-sD[i],acc};});
+  if(!esState.dia || !dias.includes(esState.dia)) esState.dia = [...dias].reverse().find(d=>d<=hoje) || dias[dias.length-1] || null;
+  const fmtD=d=>new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+  document.getElementById('es-diario').innerHTML = dias.length ? `<table>
+    <thead><tr><th>Dia</th><th class="r">Entradas</th><th class="r">Saídas</th><th class="r">Saldo</th><th class="r">Acumulado</th></tr></thead>
+    <tbody>${linhas.map(l=>`<tr class="${l.d===esState.dia?'es-sel':''}" style="cursor:pointer" onclick="esState.dia='${l.d}';renderES()">
+      <td>${fmtD(l.d)}${l.d>hoje?' <small style="color:var(--text3)">previsto</small>':''}</td><td class="r">${brl2(l.e)}</td><td class="r">${l.s?brl2(l.s):'—'}</td>
+      <td class="r ${l.sal<0?'es-neg':''}">${brl2(l.sal)}</td><td class="r"><strong>${brl2(l.acc)}</strong></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="r">${brl2(tE)}</td><td class="r">${brl2(tS)}</td><td class="r">${brl2(tE-tS)}</td><td></td></tr></tfoot></table>`
+    : '<p class="cx-nota">Sem movimento no filtro escolhido.</p>';
+
+  // detalhe do dia
+  const dE=E.filter(r=>r.data===esState.dia), dS=S.filter(r=>r.data===esState.dia);
+  document.getElementById('es-det-tit').textContent = esState.dia ? `Lançamentos de ${fmtD(esState.dia)}` : 'Lançamentos do dia';
+  document.getElementById('es-det-sub').textContent = esState.base==='caixa' ? 'Venda de outro dia aparece com a data da venda' : '';
+  const agr={}; dE.forEach(r=>{const k=`${r.loja}|${r.forma}|${r.venda&&r.venda!==r.data?r.venda:''}|${r.descricao||''}`;agr[k]=(agr[k]||0)+r.valor;});
+  document.getElementById('es-detalhe').innerHTML = esState.dia ? `<table>
+    <thead><tr><th>Tipo</th><th>Loja</th><th>Forma / categoria</th><th class="r">Valor</th></tr></thead>
+    <tbody>${Object.entries(agr).map(([k,v])=>{const[l,f,vd,ds]=k.split('|');return `<tr><td class="es-pos">Entrada</td><td>${l}</td><td>${f}${vd?` <small style="color:var(--text3)">venda de ${vd.slice(8,10)}/${vd.slice(5,7)}</small>`:''}${ds?` <small style="color:var(--text3)">${ds}</small>`:''}</td><td class="r">${brl2(v)}</td></tr>`}).join('')}
+    ${dS.map(r=>`<tr><td class="es-neg">Saída</td><td>${r.loja}</td><td>${r.categoria}${r.descricao?` <small style="color:var(--text3)">${r.descricao}</small>`:''}</td><td class="r">−${brl2(r.valor)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="3">Saldo do dia</td><td class="r">${brl2(soma(dE)-soma(dS))}</td></tr></tfoot></table>` : '';
+
+  // por forma e categoria
+  const porF={}; E.forEach(r=>{const f=r.forma.replace(/ \d+x$/,'');porF[f]=(porF[f]||0)+r.valor;});
+  hBars('es-formas', Object.entries(porF).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,fmt:brl(value)})), ()=>tok('--pos'));
+  const porC={}; S.forEach(r=>{porC[r.categoria]=(porC[r.categoria]||0)+r.valor;});
+  hBars('es-cats', Object.entries(porC).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,fmt:brl(value)})), ()=>tok('--neg'));
+
+  // consolidado por loja
+  const lj=[...new Set([...E,...S].map(r=>r.loja))].sort();
+  document.getElementById('es-lojas-tab').innerHTML = `<table>
+    <thead><tr><th>Loja</th><th class="r">Entradas</th><th class="r">Saídas</th><th class="r">Saldo</th><th class="r">A receber (crediário)</th></tr></thead>
+    <tbody>${lj.map(l=>{const e=soma(E.filter(r=>r.loja===l)),s=soma(S.filter(r=>r.loja===l)),rc=soma(R.filter(r=>r.loja===l));
+      return `<tr><td>${l}</td><td class="r">${brl2(e)}</td><td class="r">${s?brl2(s):'—'}</td><td class="r ${e-s<0?'es-neg':''}"><strong>${brl2(e-s)}</strong></td><td class="r">${rc?brl2(rc):'—'}</td></tr>`}).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="r">${brl2(tE)}</td><td class="r">${brl2(tS)}</td><td class="r">${brl2(tE-tS)}</td><td class="r">${brl2(tRec)}</td></tr></tfoot></table>`;
+
+  // aportes — lista, sem somar por sócio
+  const A=[...ES.aportes].sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const porTipo={}; A.forEach(r=>{const t=r.tipo||'—';porTipo[t]=(porTipo[t]||0)+(parseFloat(r.valor)||0);});
+  document.getElementById('es-aportes').innerHTML = !ES.aportesOk
+    ? '<p class="cx-nota">Crie na planilha a aba <b>aportes</b> com as colunas data, origem, tipo, valor, descricao. Ela aparece aqui automaticamente.</p>'
+    : `<table><thead><tr><th>Data</th><th>Origem</th><th>Tipo</th><th>Descrição</th><th class="r">Valor</th></tr></thead>
+      <tbody>${A.map(r=>`<tr><td>${r.data?r.data.split('-').reverse().join('/'):''}</td><td>${r.origem||''}</td><td>${r.tipo||''}</td><td>${r.descricao||''}</td><td class="r">${brl2(r.valor)}</td></tr>`).join('')}</tbody>
+      <tfoot>${Object.entries(porTipo).map(([t,v])=>`<tr><td colspan="4">Total ${t}</td><td class="r">${brl2(v)}</td></tr>`).join('')}</tfoot></table>`;
+
+  document.getElementById('es-nota').innerHTML = 'Prazos usados: dinheiro e Pix no mesmo dia; débito no dia útil seguinte (feriado não considerado); crédito conforme o botão acima (confirmar o contrato da maquininha); crediário fica em "a receber". As entradas das lojas são venda registrada no PDV — o dinheiro conferido depende do fechamento de caixa com valor informado. Site e Shopee entram pela aba lancamentos, como "entrada", no dia do repasse.';
+}
+
+/* ══════════════════════════════════════════
+   ABA — CAIXA DO DIA (lojas físicas)
+══════════════════════════════════════════ */
+const cxState = {data:null};
+const ehLojaFisica = l => /cachoeira|santa rita|pouso/i.test(l||'');
+let CX_MAPA = null; // id da forma → nome, lido da aba formas-pagamento
+function cxMapa(){
+  if(CX_MAPA) return CX_MAPA;
+  CX_MAPA = {};
+  const f = D.formas||[]; if(!f.length) return CX_MAPA;
+  const ks = Object.keys(f[0]);
+  const kId = ks.find(k=>/^id$/i.test(k)) || ks.find(k=>/(^|_)id(s)?$/i.test(k)) || ks[0];
+  const kNome = ks.find(k=>k!==kId && /descri|nome|forma/i.test(k)) || ks.find(k=>k!==kId);
+  f.forEach(r=>{ const id=String(r[kId]||'').trim(); if(id) CX_MAPA[id]=String(r[kNome]||'').trim()||id; });
+  return CX_MAPA;
+}
+function cxRotulo(r){
+  const bruto = String(r.formas_pagamento_ids||'').trim();
+  const ids = bruto.split(/[;,|\s]+/).filter(Boolean);
+  if(!ids.length) return 'Não informado';
+  const mapa = cxMapa();
+  const nomes = [...new Set(ids.map(id=>mapa[id]||`Forma ${id}`))];
+  if(nomes.length>1) return nomes.join(' + ');
+  let f = nomes[0];
+  const p = parseInt(r.parcelas)||1;
+  if(/cr[eé]dito/i.test(f) && !/d[eé]bito/i.test(f)) f = p>1 ? `Crédito ${p}x` : 'Crédito à vista';
+  return f;
+}
+function cxVendas(){ return (D.pedidos||[]).filter(r=>r.conta_como_venda==='sim' && ehLojaFisica(r.loja) && r.data); }
+function cxDatas(){ return [...new Set(cxVendas().map(r=>r.data.slice(0,10)))].sort(); }
+function cxPasso(d){
+  const ds = cxDatas(); if(!ds.length) return;
+  let i = ds.indexOf(cxState.data); if(i<0) i = ds.length-1;
+  i = Math.min(ds.length-1, Math.max(0, i+d));
+  cxState.data = ds[i]; renderCaixa();
+}
+function renderCaixa(){
+  const vendas = cxVendas(), ds = cxDatas();
+  if(!ds.length){
+    document.getElementById('cx-kpis').innerHTML='<div class="kpi"><span class="kpi-label">Sem dados</span><span class="kpi-sub">A aba "pedidos" não trouxe venda de loja física.</span></div>';
+    document.getElementById('cx-formas').innerHTML=''; document.getElementById('cx-semana').innerHTML=''; return;
+  }
+  if(!cxState.data || !ds.includes(cxState.data)) cxState.data = ds[ds.length-1];
+  const inp = document.getElementById('cx-data'); inp.value = cxState.data; inp.min = ds[0]; inp.max = ds[ds.length-1];
+  const dia = vendas.filter(r=>r.data.slice(0,10)===cxState.data);
+  const lojas = [...new Set(vendas.map(r=>r.loja))].sort();
+  const soma = a => a.reduce((s,r)=>s+(parseFloat(r.total)||0),0);
+  const tot = soma(dia);
+  const dFmt = new Date(cxState.data+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'});
+
+  document.getElementById('cx-kpis').innerHTML =
+    `<div class="kpi"><span class="kpi-label">Total do dia</span><span class="kpi-value">${brl2(tot)}</span><span class="kpi-sub">${dFmt} · ${dia.length} pedidos</span></div>` +
+    lojas.map(l=>{const a=dia.filter(r=>r.loja===l),v=soma(a);
+      return `<div class="kpi"><span class="kpi-label">${l}</span><span class="kpi-value">${brl2(v)}</span><span class="kpi-sub">${a.length} pedidos · ticket ${a.length?brl2(v/a.length):'—'}</span></div>`}).join('');
+
+  // forma × loja
+  const ordem = f => { const m=f.match(/Crédito (\d+)x/); if(/^dinheiro/i.test(f))return 0; if(/pix/i.test(f))return 1; if(/d[eé]bito/i.test(f))return 2; if(/à vista/.test(f))return 3; if(m)return 3+parseInt(m[1]); return 99; };
+  const formas = [...new Set(dia.map(cxRotulo))].sort((a,b)=>ordem(a)-ordem(b)||a.localeCompare(b));
+  const cel = (f,l) => { const a=dia.filter(r=>cxRotulo(r)===f && (!l||r.loja===l)); return a.length?`${brl2(soma(a))}<br><small style="color:var(--text3)">${a.length} ped.</small>`:'<span style="color:var(--text3)">—</span>'; };
+  document.getElementById('cx-formas').innerHTML = formas.length ? `<table>
+    <thead><tr><th>Forma de pagamento</th>${lojas.map(l=>`<th class="r">${l}</th>`).join('')}<th class="r">Total</th><th class="r">Part.%</th></tr></thead>
+    <tbody>${formas.map(f=>{const v=soma(dia.filter(r=>cxRotulo(r)===f));return `<tr><td>${f}</td>${lojas.map(l=>`<td class="r">${cel(f,l)}</td>`).join('')}<td class="r"><strong>${brl2(v)}</strong></td><td class="r">${pct(v,tot)}</td></tr>`}).join('')}</tbody>
+    <tfoot><tr><td>Total</td>${lojas.map(l=>`<td class="r">${brl2(soma(dia.filter(r=>r.loja===l)))}</td>`).join('')}<td class="r">${brl2(tot)}</td><td class="r">100%</td></tr></tfoot>
+  </table>` : '<p class="cx-nota">Nenhuma venda de loja física neste dia.</p>';
+
+  // últimos 7 dias
+  const i = ds.indexOf(cxState.data), ult = ds.slice(Math.max(0,i-6), i+1).reverse();
+  document.getElementById('cx-semana').innerHTML = `<table>
+    <thead><tr><th>Dia</th>${lojas.map(l=>`<th class="r">${l}</th>`).join('')}<th class="r">Total</th></tr></thead>
+    <tbody>${ult.map(d=>{const a=vendas.filter(r=>r.data.slice(0,10)===d);
+      const lbl=new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+      return `<tr style="cursor:pointer" onclick="cxState.data='${d}';renderCaixa()"><td>${d===cxState.data?'<strong>'+lbl+'</strong>':lbl}</td>${lojas.map(l=>`<td class="r">${brl2(soma(a.filter(r=>r.loja===l)))}</td>`).join('')}<td class="r"><strong>${brl2(soma(a))}</strong></td></tr>`}).join('')}</tbody>
+  </table>`;
+}
+
 /* ══════════════════════════════════════════
    ABA 7 — CHECKLIST
 ══════════════════════════════════════════ */
 const CK_DATA=[
-  {id:'aportes',emoji:'💰',titulo:'Aportes',sub:'Capital + tecido',inds:[
-    {id:'a1',nome:'Aporte total por sócio, acumulado',st:'manual',fonte:'Lançamento manual — planilha de sócios'},
-    {id:'a2',nome:'Aporte em dinheiro vs. em tecido (separados)',st:'manual',fonte:'Lançamento manual por entrada'},
-    {id:'a3',nome:'% do aporte já convertido em estoque/produto',st:'manual',fonte:'Cruza aportes (manual) × custo de estoque (Bling)'},
+  {id:'aportes',emoji:'💰',titulo:'Aportes',sub:'Capital + tecido · sem abrir por sócio',inds:[
+    {id:'a2',nome:'Capital recebido no período (dinheiro × tecido, separados)',st:'manual',fonte:'Aportes formalizados — abertura por sócio só com aval do Gassen'},
+    {id:'a3',nome:'% do capital já convertido em estoque/produto',st:'manual',fonte:'Capital recebido ÷ valor produzido a custo'},
   ]},
   {id:'producao',emoji:'🧵',titulo:'Produção',sub:'Mão de obra',inds:[
-    {id:'p1',nome:'Custo de mão de obra por peça',st:'manual',fonte:'Lançamento manual por ordem de produção'},
-    {id:'p2',nome:'Custo de mão de obra por linha de produto',st:'manual',fonte:'Agrupa custo por peça por linha'},
-    {id:'p3',nome:'Peças produzidas por período',st:'manual',fonte:'Saída do processo de produção — ainda não no Bling'},
-    {id:'p4',nome:'Lead time: dias entre corte e peça pronta',st:'manual',fonte:'Data corte e data conclusão por ordem de produção'},
+    {id:'p1',nome:'Custo de mão de obra por peça, por linha',st:'manual',fonte:'Financeiro da produção'},
+    {id:'p3',nome:'Peças produzidas por período',st:'manual',fonte:'Ordens de produção — ainda não no Bling'},
+    {id:'p4',nome:'Lead time: dias entre corte e peça pronta',st:'futuro',fonte:'Registro de data do corte e da peça pronta — a criar'},
   ]},
-  {id:'estoque',emoji:'📦',titulo:'Estoque',sub:'Valorado a custo',inds:[
-    {id:'e1',nome:'Valor total do estoque a custo',st:'parcial',fonte:'Bling — precisa mapear campo de custo unitário'},
-    {id:'e2',nome:'Giro de estoque por linha (vendidas ÷ em estoque)',st:'parcial',fonte:'Bling vendas + estoque atual — cálculo a construir'},
-    {id:'e3',nome:'Cobertura em dias no ritmo de venda atual',st:'parcial',fonte:'Giro × dias do período'},
-    {id:'e4',nome:'Idade média do estoque',st:'futuro',fonte:'Precisa de data de entrada por SKU no Bling'},
+  {id:'estoque',emoji:'📦',titulo:'Estoque',sub:'Valorado a custo, todos os depósitos',inds:[
+    {id:'e1',nome:'Valor total do estoque a custo',st:'parcial',fonte:'Bling — somar todos os depósitos; o "saldo total" não inclui o E-commerce'},
+    {id:'e2',nome:'Giro por linha (vendidas ÷ estoque médio do período)',st:'parcial',fonte:'Bling vendas + estoque — kits não baixam as peças (teste em 30/09)'},
+    {id:'e3',nome:'Cobertura em dias (venda média dos últimos 28 dias)',st:'parcial',fonte:'Estoque ÷ venda média diária'},
+    {id:'e4',nome:'Idade média e peças sem venda paga em 90 dias',st:'futuro',fonte:'Data de entrada por SKU no Bling'},
   ]},
-  {id:'canais',emoji:'🏪',titulo:'Canais',sub:'Site, lojas físicas, marketplace',inds:[
-    {id:'c1',nome:'Faturamento por canal',st:'disponivel',fonte:'vendas-diarias → loja + total — ✅ ABA CANAIS'},
+  {id:'canais',emoji:'🏪',titulo:'Canais',sub:'Cachoeira, Santa Rita, Pouso Alegre, Site, Shopee, Mercado Livre',inds:[
+    {id:'c1',nome:'Venda líquida por canal',st:'disponivel',fonte:'Só pago, líquida · site pelo Shopify — ✅ ABA CANAIS'},
     {id:'c2',nome:'% de participação por canal no total',st:'disponivel',fonte:'Calculado — ✅ ABA CANAIS (donut)'},
-    {id:'c3',nome:'Ticket médio por canal',st:'disponivel',fonte:'total ÷ pedidos por canal — ✅ ABA CANAIS'},
+    {id:'c3',nome:'Ticket médio por canal',st:'disponivel',fonte:'Venda líquida ÷ pedidos pagos — ✅ ABA CANAIS'},
+    {id:'c4',nome:'Shopee e Mercado Livre separados',st:'parcial',fonte:'Mercado Livre abriu em 21/09 — conferir se entra no Bling como loja própria'},
   ]},
-  {id:'vendas',emoji:'📈',titulo:'Vendas',sub:'Giro por produto',inds:[
-    {id:'v1',nome:'Pedidos por dia e por mês',st:'disponivel',fonte:'pedidos.csv — ✅ ABA VENDAS'},
-    {id:'v2',nome:'Lucro por produto (preço − custo)',st:'futuro',fonte:'Precisa de custo unitário do Bling por SKU'},
+  {id:'vendas',emoji:'📈',titulo:'Vendas',sub:'Pedido pago, venda líquida',inds:[
+    {id:'v1',nome:'Pedidos pagos por dia e por mês',st:'disponivel',fonte:'pedidos.csv — app do Shopify soma Pix não pago'},
+    {id:'v2',nome:'Lucro por produto (preço líquido − custo)',st:'futuro',fonte:'Custo unitário por SKU'},
     {id:'v3',nome:'Top produtos por lucro total',st:'futuro',fonte:'Depende de v2'},
-    {id:'v4',nome:'Taxa de conversão do site (visitas → pedido)',st:'parcial',fonte:'shopify-diario (pedidos) + GA4 — falta GA4'},
-    {id:'v5',nome:'Formas de pagamento — distribuição',st:'disponivel',fonte:'formas-pagamento.csv — ✅ ABA PAGAMENTOS'},
-    {id:'v6',nome:'Taxa de pedidos pagos vs. expirados',st:'disponivel',fonte:'pedidos.csv → situacao_id — ✅ ABA VENDAS'},
+    {id:'v4',nome:'Conversão do site (pedidos pagos ÷ sessões)',st:'parcial',fonte:'Shopify — falta sessões na planilha'},
+    {id:'v6',nome:'Pix e boletos vencidos (% dos gerados)',st:'disponivel',fonte:'shopify-diario por status — ✅ ABA SITE'},
   ]},
   {id:'entrega',emoji:'🚚',titulo:'Entrega',sub:'Envio, trocas e devoluções',inds:[
-    {id:'en1',nome:'Prazo médio de entrega (pagamento → cliente)',st:'futuro',fonte:'Precisa de data de entrega confirmada'},
+    {id:'en1',nome:'Prazo médio de entrega (pagamento → cliente)',st:'futuro',fonte:'Shopify — data de entrega confirmada'},
     {id:'en2',nome:'% de pedidos entregues no prazo',st:'futuro',fonte:'Data prometida + data real'},
-    {id:'en3',nome:'Custo de frete por pedido',st:'disponivel',fonte:'pedidos.csv → custo_frete — ✅ ABA FRETE'},
-    {id:'en4',nome:'Taxa de devolução por produto',st:'futuro',fonte:'Dados de devolução — não nos CSVs atuais'},
-    {id:'en5',nome:'Taxa de troca (tamanho/cor)',st:'futuro',fonte:'Motivo de troca — campo não capturado'},
-    {id:'en6',nome:'Tempo médio até reembolso ou reenvio',st:'futuro',fonte:'Data abertura × data resolução'},
-    {id:'en7',nome:'Custo total de logística reversa',st:'futuro',fonte:'Frete retorno + reenvio — não capturado'},
+    {id:'en3',nome:'Custo de frete por pedido, por transportadora',st:'parcial',fonte:'pedidos.csv → custo_frete; falta transportadora'},
+    {id:'en4',nome:'Taxa de devolução por produto e linha',st:'futuro',fonte:'Troquecommerce'},
+    {id:'en5',nome:'Taxa de troca e motivo categorizado',st:'futuro',fonte:'Troquecommerce — "pendentes" do Shopify incluem trocas'},
+    {id:'en6',nome:'Tempo médio até reembolso ou reenvio',st:'futuro',fonte:'Troquecommerce'},
+    {id:'en7',nome:'Custo total de logística reversa',st:'futuro',fonte:'Frete de volta + reenvio'},
   ]},
-  {id:'financeiro',emoji:'💳',titulo:'Financeiro',sub:'Fluxo de caixa',inds:[
-    {id:'f1',nome:'Total lançado × total efetivamente pago',st:'parcial',fonte:'pedidos.csv (lançado) + Bling financeiro (falta)'},
-    {id:'f2',nome:'Saldo do período (recebido − pago)',st:'manual',fonte:'Receitas do Bling + custos fixos manuais'},
-    {id:'f3',nome:'% de pagamentos expirados',st:'disponivel',fonte:'pedidos.csv → situacao_id — ✅ ABA VENDAS'},
-    {id:'f4',nome:'Prazo médio entre vencimento e pagamento',st:'parcial',fonte:'primeiro_vencimento no pedidos.csv — falta data pagamento real'},
-    {id:'f5',nome:'Custos fixos (aluguel, folha)',st:'manual',fonte:'Lançamento manual — ✅ 3 lojas parcialmente lançadas'},
+  {id:'financeiro',emoji:'💳',titulo:'Financeiro',sub:'Venda × caixa',inds:[
+    {id:'f6',nome:'Faturamento do dia por loja física',st:'disponivel',fonte:'Bling — ✅ ABA CAIXA DO DIA'},
+    {id:'f7',nome:'Recebimento por forma de pagamento (crédito por parcela)',st:'parcial',fonte:'Bling ✅ ABA CAIXA DO DIA · recebido de fato depende do fechamento de caixa'},
+    {id:'f8',nome:'Prazo de repasse por meio de pagamento',st:'parcial',fonte:'Pix na hora · crédito site 29d + 2 úteis · Shopee ~2–3 semanas'},
+    {id:'f1',nome:'Total lançado × efetivamente pago',st:'parcial',fonte:'Contas a pagar — falta Bling financeiro'},
+    {id:'f2',nome:'Saldo do período (recebido − pago), só entradas de caixa',st:'manual',fonte:'Sem aporte nem saldo por sócio'},
+    {id:'f3',nome:'% de pagamentos que expiram',st:'disponivel',fonte:'pedidos.csv → situação'},
+    {id:'f4',nome:'Prazo médio entre vencimento e pagamento',st:'parcial',fonte:'Falta data de pagamento real'},
+    {id:'f5',nome:'Custos fixos (aluguel, folha, contas)',st:'manual',fonte:'custos-fixos — folha e Pouso Alegre incompletos'},
   ]},
-  {id:'marketing',emoji:'📣',titulo:'Marketing',sub:'Meta + Google Ads',inds:[
-    {id:'m1',nome:'Investimento em marketing % do faturamento',st:'manual',fonte:'Gasto em ads lançado manualmente'},
-    {id:'m2',nome:'ROAS por campanha',st:'futuro',fonte:'API Meta Ads ou Google Ads — não integrado'},
-    {id:'m3',nome:'Custo por compra vs. ticket médio',st:'futuro',fonte:'CPA das plataformas + ticket de vendas-diarias'},
-    {id:'m4',nome:'Sessões do site por origem',st:'futuro',fonte:'Google Analytics 4 — não integrado'},
-    {id:'m5',nome:'Visitas ao site por dia',st:'disponivel',fonte:'shopify-site-diario.csv — ✅ ABA SITE'},
+  {id:'marketing',emoji:'📣',titulo:'Marketing',sub:'Verba = só anúncio; agência à parte',inds:[
+    {id:'m1',nome:'Verba em % da venda líquida',st:'manual',fonte:'Meta + Google Ads — mensalidade da agência em linha separada'},
+    {id:'m2',nome:'ROAS (venda paga ÷ verba), por semana e campanha',st:'manual',fonte:'Meta ligado só no PC do Gassen'},
+    {id:'m3',nome:'Custo por compra × ticket médio',st:'futuro',fonte:'CPA da Meta + ticket do Shopify'},
+    {id:'m6',nome:'% da verba em campanhas sem compra atribuída',st:'manual',fonte:'Meta'},
+    {id:'m7',nome:'Custo por conversa no WhatsApp (anúncio das lojas)',st:'manual',fonte:'Meta'},
+    {id:'m8',nome:'"Vi no Instagram" no caixa das lojas',st:'futuro',fonte:'Papel no caixa — ainda não operado todo dia'},
   ]},
 ];
 const CK_TOTAL=CK_DATA.reduce((s,e)=>s+e.inds.length,0);
@@ -1371,6 +1739,9 @@ function normData(v){
   const s = String(v).trim();
   // já está no formato correto
   if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0,10);
+  // formato brasileiro: 28/09/2026
+  const mBR = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(mBR) return `${mBR[3]}-${mBR[2].padStart(2,'0')}-${mBR[1].padStart(2,'0')}`;
   // formato longo do Sheets: "Tue Sep 01 2026 00:00:00 GMT-0300 ..."
   // Extrai diretamente com regex para evitar drift de fuso horário
   const m1 = s.match(/(\w{3})\s(\w{3})\s(\d{2})\s(\d{4})/);
@@ -1529,6 +1900,7 @@ async function init(){
       (document.querySelector('.main-content') || document.body).prepend(banner);
     }
 
+    await esCarregar();
     loaded=true;
     renderFluxo();
     ckRender();
