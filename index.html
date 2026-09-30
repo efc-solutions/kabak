@@ -301,11 +301,11 @@ tr.es-sel td{background:var(--border)}
   </div>
   <div class="two-col">
     <div class="section">
-      <div class="section-hd"><div><div class="section-title">Entradas por forma</div><div class="section-sub">Crediário fica fora: é a receber</div></div></div>
+      <div class="section-hd"><div><div class="section-title">Entradas por origem</div><div class="section-sub" id="es-formas-sub">Crediário fica fora: é a receber</div></div></div>
       <div class="hbar-wrap" id="es-formas"></div>
     </div>
     <div class="section">
-      <div class="section-hd"><div><div class="section-title">Saídas por categoria</div><div class="section-sub">Inclui as sangrias do caixa das lojas</div></div></div>
+      <div class="section-hd"><div><div class="section-title">Saídas por categoria</div><div class="section-sub" id="es-cats-sub">Inclui as sangrias do caixa das lojas</div></div></div>
       <div class="hbar-wrap" id="es-cats"></div>
     </div>
   </div>
@@ -1371,7 +1371,59 @@ const ES_EXEMPLO_LANC = [{"data": "24/09/2026", "tipo": "saida", "categoria": "r
    existirem, usa os fechamentos de 24–28/09 como exemplo.
 ══════════════════════════════════════════ */
 const esState = {base:'caixa', cred:'antecipado', mes:'todos', loja:'todas', dia:null};
-let ES = {caixa:[], lanc:[], aportes:[], exemplo:{caixa:false, lanc:false}, aportesOk:false};
+let ES = {caixa:[], lanc:[], aportes:[], contas:null, aPagar:[], porFora:[], exemplo:{caixa:false, lanc:false}, aportesOk:false};
+
+// ── aba "contas": controle de contas da Kabak (formato da planilha CONTROLE_CONTAS_KABAK)
+const esSemAcento = t => String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+function esCategoria(desc, ehEntrada){
+  const d = esSemAcento(desc).toUpperCase();
+  if(/INVESTIMENTO|APORTE/.test(d)) return ['aporte','Aporte'];
+  if(ehEntrada){
+    if(/SITE/.test(d))          return ['entrada','Repasse site'];
+    if(/PIX LOJA/.test(d))      return ['entrada','Pix lojas'];
+    if(/ENTRADA LOJA/.test(d))  return ['entrada','Cartão lojas'];
+    if(/SHOPEE/.test(d))        return ['entrada','Repasse Shopee'];
+    if(/MERCADO ?LIVRE/.test(d))return ['entrada','Repasse Mercado Livre'];
+    return ['entrada','Outras entradas'];
+  }
+  const R=[[/TRAFEGO/,'Anúncio (tráfego)'],[/TIT+ANIUM/,'Agência (Titanium)'],[/FRENET|TRANSPORTADORA|CORREIOS/,'Frete'],[/ALUGUEL/,'Aluguel'],
+    [/VIVO|INTERNET|CEMIG|COPASA|ENERGIA|AGUA/,'Contas de consumo'],[/\bDAS\b|INSS|FAZENDA|FAZEENDA|IMPOSTO/,'Impostos'],[/CONTADOR/,'Contador'],
+    [/BLING|RD STATION|TROQUE|TREINAMENTO|SHOPIFY/,'Sistemas'],[/MAO DE OBRA/,'Mão de obra'],[/PROLABORE|PRO LABORE/,'Pró-labore'],
+    [/DUDA|SALARIO|FOLHA/,'Equipe'],[/FACHADA/,'Obra loja Pouso Alegre'],[/FORMOSA/,'Material loja'],[/CARTAO/,'Fatura do cartão'],[/TECIDO/,'Tecido']];
+  for(const [rx,c] of R) if(rx.test(d)) return ['saida',c];
+  return ['saida','Outros'];
+}
+function esLojaDe(desc){
+  const d=esSemAcento(desc);
+  if(/santa rita|sta rita/.test(d)) return 'Santa Rita';
+  if(/cachoeira/.test(d)) return 'Cachoeira';
+  if(/pouso|loja pa\b/.test(d)) return 'Pouso Alegre';
+  if(/site/.test(d)) return 'Site';
+  if(/pix loja|entrada loja/.test(d)) return 'Lojas físicas';
+  return 'Geral';
+}
+function esLerContas(rows){
+  const k = r => { const n={}; for(const c in r) n[esSemAcento(c)] = r[c]; return n; };
+  const lanc=[], aportes=[], aPagar=[], porFora=[];
+  rows.map(k).forEach(r=>{
+    const desc=(r['pagamento']||'').trim(); if(!desc || /^total$/i.test(desc)) return;
+    const venc=normData(r['data vencimento']), pagRaw=(r['data pagamento']||'').trim(), pag=normData(pagRaw);
+    const ehData=/^\d{4}-\d{2}-\d{2}$/.test(pag);
+    const entrada=parseFloat(normNum(r['entrada']))||0;
+    const valor=parseFloat(normNum(r['saida']))||parseFloat(normNum(r['valor']))||0;
+    const [tipo,cat]=esCategoria(desc, entrada>0);
+    const loja=esLojaDe(desc);
+    if(tipo==='aporte'){ aportes.push({data:ehData?pag:venc, origem:desc.replace(/ENTRADA|INVESTIMENTO/gi,'').trim()||'—', tipo:'dinheiro', descricao:desc, valor:entrada||valor}); return; }
+    if(tipo==='entrada'){ lanc.push({data:ehData?pag:venc, tipo:'entrada', categoria:cat, loja, descricao:desc, valor:entrada}); return; }
+    // saídas
+    if(/expirad/i.test(pagRaw)) return;                                   // Pix gerado e não pago
+    if(/jean fez|por fora/i.test(pagRaw)){ porFora.push({data:venc, categoria:cat, descricao:desc, valor}); return; }
+    const copiada = ehData && venc && (new Date(venc)-new Date(pag))/864e5 >= 20; // data de pgto copiada do mês anterior
+    if(ehData && !copiada) lanc.push({data:pag, tipo:'saida', categoria:cat, loja, descricao:desc, valor});
+    else aPagar.push({data:venc, categoria:cat, loja, descricao:desc, valor, obs: copiada?'data de pagamento parece copiada do mês anterior':''});
+  });
+  return {lanc, aportes, aPagar, porFora};
+}
 
 async function esAba(nome, colsObrigatorias){
   // gviz devolve a 1ª aba quando o nome não existe — por isso confere o cabeçalho
@@ -1380,13 +1432,14 @@ async function esAba(nome, colsObrigatorias){
     const r = await fetch(url); if(!r.ok) return null;
     const rows = parseCSVText(await r.text());
     if(!rows.length) return null;
-    const cols = Object.keys(rows[0]).map(c=>c.trim().toLowerCase());
+    const cols = Object.keys(rows[0]).map(c=>esSemAcento(c));
     if(!colsObrigatorias.every(c=>cols.includes(c))) return null;
     return rows.map(o=>{const n={};for(const k in o)n[k.trim().toLowerCase()]=o[k];return n;});
   }catch(e){ console.warn('esAba', nome, e.message); return null; }
 }
 async function esCarregar(){
-  const [cx, lc, ap] = await Promise.all([
+  const [ct, cx, lc, ap] = await Promise.all([
+    esAba('contas', ['data vencimento','pagamento']),
     esAba('caixa-lojas', ['data','loja','forma','valor']),
     esAba('lancamentos', ['data','tipo','valor']),
     esAba('aportes', ['data','valor']),
@@ -1395,6 +1448,12 @@ async function esCarregar(){
   ES.caixa   = normRows(cx || ES_EXEMPLO_CAIXA, ['data'], ['valor','parcelas']);
   ES.lanc    = normRows(lc || ES_EXEMPLO_LANC,  ['data'], ['valor']);
   ES.aportes = normRows(ap || [], ['data'], ['valor']);
+  ES.contas = null; ES.aPagar=[]; ES.porFora=[];
+  if(ct && ct.length){
+    const c = esLerContas(ct);
+    ES.contas = c.lanc; ES.aPagar = c.aPagar; ES.porFora = c.porFora;
+    if(c.aportes.length){ ES.aportes = [...c.aportes, ...ES.aportes]; ES.aportesOk = true; }
+  }
 }
 
 const esAddDias = (iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
@@ -1457,15 +1516,22 @@ function esChart(labels, ent, sai, h=230){
 
 function renderES(){
   const hoje=esHoje();
-  const {out:entCaixa, receber} = esEntradasCaixa();
-  const lancEnt = ES.lanc.filter(r=>/^entrada/i.test(r.tipo||'')).map(r=>({data:r.data, loja:r.loja||'Geral', forma:r.categoria||'Outras entradas', origem:'Lançamento', descricao:r.descricao||'', valor:parseFloat(r.valor)||0}));
-  const saidas  = ES.lanc.filter(r=>/^sa[ií]da/i.test(r.tipo||'')).map(r=>({data:r.data, loja:r.loja||'Geral', categoria:r.categoria||'Outros', descricao:r.descricao||'', valor:Math.abs(parseFloat(r.valor)||0)}));
+  const {out:entCaixaEst, receber} = esEntradasCaixa();
+  const temContas = !!ES.contas;
+  // com a aba contas, as entradas das lojas vêm do banco (Pix/cartão lojas) — a estimativa do PDV sairia em dobro
+  const entCaixa = temContas ? [] : entCaixaEst;
+  const lancBase = temContas ? [...ES.contas, ...(ES.exemplo.lanc?[]:ES.lanc)] : ES.lanc;
+  document.querySelectorAll('#tab-es .es-bar')[0].style.display = temContas ? 'none' : '';
+  const lancEnt = lancBase.filter(r=>/^entrada/i.test(r.tipo||'')).map(r=>({data:r.data, loja:r.loja||'Geral', forma:r.categoria||'Outras entradas', origem:'Lançamento', descricao:r.descricao||'', valor:parseFloat(r.valor)||0}));
+  const saidas  = lancBase.filter(r=>/^sa[ií]da/i.test(r.tipo||'')).map(r=>({data:r.data, loja:r.loja||'Geral', categoria:r.categoria||'Outros', descricao:r.descricao||'', valor:Math.abs(parseFloat(r.valor)||0)}));
   let ent=[...entCaixa, ...lancEnt];
 
   // avisos de fonte
   const av=[];
-  if(ES.exemplo.caixa) av.push('A aba <b>caixa-lojas</b> ainda não existe na planilha: as entradas das lojas são os fechamentos de 24 a 28/09 (exemplo).');
-  if(ES.exemplo.lanc)  av.push('A aba <b>lancamentos</b> ainda não existe: as saídas são só as sangrias desses fechamentos.');
+  if(!temContas){
+    if(ES.exemplo.caixa) av.push('A aba <b>caixa-lojas</b> ainda não existe na planilha: as entradas das lojas são os fechamentos de 24 a 28/09 (exemplo).');
+    if(ES.exemplo.lanc)  av.push('A aba <b>contas</b> ainda não existe: as saídas são só as sangrias desses fechamentos.');
+  }
   document.getElementById('es-aviso').innerHTML = av.length?`<div class="es-aviso">${av.join('<br>')}</div>`:'';
   document.getElementById('es-badge').innerHTML = av.length?'Exemplo':'<span class="dot"></span> Ao vivo';
 
@@ -1488,12 +1554,14 @@ function renderES(){
     <div class="kpi"><span class="kpi-label">Entradas</span><span class="kpi-value es-pos">${brl2(tE)}</span><span class="kpi-sub">${tFut?`${brl2(tFut)} ainda vão cair`:'todas já caíram'}</span></div>
     <div class="kpi"><span class="kpi-label">Saídas</span><span class="kpi-value es-neg">${brl2(tS)}</span><span class="kpi-sub">${ret.length?`${brl2(soma(ret))} em retiradas do caixa`:S.length+' lançamentos'}</span></div>
     <div class="kpi"><span class="kpi-label">Saldo do período</span><span class="kpi-value ${tE-tS<0?'es-neg':''}">${brl2(tE-tS)}</span><span class="kpi-sub">entradas − saídas, sem aportes</span></div>
-    <div class="kpi"><span class="kpi-label">A receber · crediário</span><span class="kpi-value">${brl2(tRec)}</span><span class="kpi-sub">venda sem dinheiro ainda</span></div>`;
+    ${temContas
+      ? (()=>{const AP=ES.aPagar.filter(r=>esState.mes==='todos'||(r.data||'').startsWith(esState.mes));return `<div class="kpi"><span class="kpi-label">A pagar</span><span class="kpi-value">${brl2(soma(AP))}</span><span class="kpi-sub">${AP.length} contas em aberto</span></div>`})()
+      : `<div class="kpi"><span class="kpi-label">A receber · crediário</span><span class="kpi-value">${brl2(tRec)}</span><span class="kpi-sub">venda sem dinheiro ainda</span></div>`}`;
 
   // diário
   const dias=[...new Set([...E,...S].map(r=>r.data))].sort();
   const eD=dias.map(d=>soma(E.filter(r=>r.data===d))), sD=dias.map(d=>soma(S.filter(r=>r.data===d)));
-  document.getElementById('es-chart-sub').textContent = esState.base==='caixa'
+  document.getElementById('es-chart-sub').textContent = temContas ? 'Pela data de pagamento na aba contas' : esState.base==='caixa'
     ? `Pela data em que o dinheiro entra · crédito ${esState.cred==='antecipado'?'antecipado em D+1 útil':'sem antecipação, 30 dias por parcela'}`
     : 'Pela data da venda';
   esChart(dias.map(d=>d.slice(8,10)+'/'+d.slice(5,7)), eD, sD);
@@ -1513,7 +1581,7 @@ function renderES(){
   // detalhe do dia
   const dE=E.filter(r=>r.data===esState.dia), dS=S.filter(r=>r.data===esState.dia);
   document.getElementById('es-det-tit').textContent = esState.dia ? `Lançamentos de ${fmtD(esState.dia)}` : 'Lançamentos do dia';
-  document.getElementById('es-det-sub').textContent = esState.base==='caixa' ? 'Venda de outro dia aparece com a data da venda' : '';
+  document.getElementById('es-det-sub').textContent = (!temContas && esState.base==='caixa') ? 'Venda de outro dia aparece com a data da venda' : '';
   const agr={}; dE.forEach(r=>{const k=`${r.loja}|${r.forma}|${r.venda&&r.venda!==r.data?r.venda:''}|${r.descricao||''}`;agr[k]=(agr[k]||0)+r.valor;});
   document.getElementById('es-detalhe').innerHTML = esState.dia ? `<table>
     <thead><tr><th>Tipo</th><th>Loja</th><th>Forma / categoria</th><th class="r">Valor</th></tr></thead>
@@ -1521,6 +1589,8 @@ function renderES(){
     ${dS.map(r=>`<tr><td class="es-neg">Saída</td><td>${r.loja}</td><td>${r.categoria}${r.descricao?` <small style="color:var(--text3)">${r.descricao}</small>`:''}</td><td class="r">−${brl2(r.valor)}</td></tr>`).join('')}</tbody>
     <tfoot><tr><td colspan="3">Saldo do dia</td><td class="r">${brl2(soma(dE)-soma(dS))}</td></tr></tfoot></table>` : '';
 
+  document.getElementById('es-formas-sub').textContent = temContas ? 'Repasse do site, Pix e cartão das lojas' : 'Crediário fica fora: é a receber';
+  document.getElementById('es-cats-sub').textContent  = temContas ? 'Contas pagas no período · aportes fora' : 'Inclui as sangrias do caixa das lojas';
   // por forma e categoria
   const porF={}; E.forEach(r=>{const f=r.forma.replace(/ \d+x$/,'');porF[f]=(porF[f]||0)+r.valor;});
   hBars('es-formas', Object.entries(porF).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value,fmt:brl(value)})), ()=>tok('--pos'));
@@ -1530,10 +1600,25 @@ function renderES(){
   // consolidado por loja
   const lj=[...new Set([...E,...S].map(r=>r.loja))].sort();
   document.getElementById('es-lojas-tab').innerHTML = `<table>
-    <thead><tr><th>Loja</th><th class="r">Entradas</th><th class="r">Saídas</th><th class="r">Saldo</th><th class="r">A receber (crediário)</th></tr></thead>
+    <thead><tr><th>Loja</th><th class="r">Entradas</th><th class="r">Saídas</th><th class="r">Saldo</th>${temContas?'':'<th class="r">A receber (crediário)</th>'}</tr></thead>
     <tbody>${lj.map(l=>{const e=soma(E.filter(r=>r.loja===l)),s=soma(S.filter(r=>r.loja===l)),rc=soma(R.filter(r=>r.loja===l));
-      return `<tr><td>${l}</td><td class="r">${brl2(e)}</td><td class="r">${s?brl2(s):'—'}</td><td class="r ${e-s<0?'es-neg':''}"><strong>${brl2(e-s)}</strong></td><td class="r">${rc?brl2(rc):'—'}</td></tr>`}).join('')}</tbody>
-    <tfoot><tr><td>Total</td><td class="r">${brl2(tE)}</td><td class="r">${brl2(tS)}</td><td class="r">${brl2(tE-tS)}</td><td class="r">${brl2(tRec)}</td></tr></tfoot></table>`;
+      return `<tr><td>${l}</td><td class="r">${brl2(e)}</td><td class="r">${s?brl2(s):'—'}</td><td class="r ${e-s<0?'es-neg':''}"><strong>${brl2(e-s)}</strong></td>${temContas?'':`<td class="r">${rc?brl2(rc):'—'}</td>`}</tr>`}).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="r">${brl2(tE)}</td><td class="r">${brl2(tS)}</td><td class="r">${brl2(tE-tS)}</td>${temContas?'':`<td class="r">${brl2(tRec)}</td>`}</tr></tfoot></table>`;
+
+  // contas a pagar e pagas por fora (só com a aba contas)
+  let apHtml='';
+  if(temContas){
+    const AP=[...ES.aPagar].filter(r=>esState.mes==='todos'||(r.data||'').startsWith(esState.mes)).sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+    const PF=ES.porFora.filter(r=>esState.mes==='todos'||(r.data||'').startsWith(esState.mes));
+    apHtml = `<div class="section"><div class="section-hd"><div><div class="section-title">Contas a pagar</div><div class="section-sub">Sem data de pagamento na planilha · não entram no saldo</div></div></div>
+      <div class="table-wrap">${AP.length?`<table><thead><tr><th>Vencimento</th><th>Conta</th><th>Categoria</th><th class="r">Valor</th></tr></thead>
+      <tbody>${AP.map(r=>`<tr><td>${r.data?r.data.split('-').reverse().join('/'):''}${r.data&&r.data<hoje?' <small class="es-neg">vencida</small>':''}</td><td>${r.descricao}${r.obs?`<br><small style="color:var(--warn)">${r.obs}</small>`:''}</td><td>${r.categoria}</td><td class="r">${brl2(r.valor)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="3">Total</td><td class="r">${brl2(soma(AP))}</td></tr></tfoot></table>`:'<p class="cx-nota">Nenhuma conta em aberto no filtro.</p>'}
+      ${PF.length?`<p class="cx-nota">Pagas por fora da conta da Kabak (Jean): ${PF.length} lançamentos, ${brl2(soma(PF))} — fora do saldo.</p>`:''}</div></div>`;
+  }
+  let apEl=document.getElementById('es-apagar');
+  if(!apEl){ apEl=document.createElement('div'); apEl.id='es-apagar'; const ref=document.getElementById('es-aportes').closest('.section'); ref.parentNode.insertBefore(apEl, ref); }
+  apEl.innerHTML=apHtml;
 
   // aportes — lista, sem somar por sócio
   const A=[...ES.aportes].sort((a,b)=>(a.data||'').localeCompare(b.data||''));
@@ -1544,7 +1629,9 @@ function renderES(){
       <tbody>${A.map(r=>`<tr><td>${r.data?r.data.split('-').reverse().join('/'):''}</td><td>${r.origem||''}</td><td>${r.tipo||''}</td><td>${r.descricao||''}</td><td class="r">${brl2(r.valor)}</td></tr>`).join('')}</tbody>
       <tfoot>${Object.entries(porTipo).map(([t,v])=>`<tr><td colspan="4">Total ${t}</td><td class="r">${brl2(v)}</td></tr>`).join('')}</tfoot></table>`;
 
-  document.getElementById('es-nota').innerHTML = 'Prazos usados: dinheiro e Pix no mesmo dia; débito no dia útil seguinte (feriado não considerado); crédito conforme o botão acima (confirmar o contrato da maquininha); crediário fica em "a receber". As entradas das lojas são venda registrada no PDV — o dinheiro conferido depende do fechamento de caixa com valor informado. Site e Shopee entram pela aba lancamentos, como "entrada", no dia do repasse.';
+  document.getElementById('es-nota').innerHTML = temContas
+    ? 'Fonte: aba <b>contas</b> (controle de contas da Kabak). Entradas e saídas pela data de pagamento; sem data = a pagar; "EXPIRADO" não entra; "JEAN FEZ" fica fora do saldo. Aportes aparecem só na tabela de aportes. Venda em dinheiro que não é depositada não aparece aqui — ver sangrias no Caixa do dia.'
+    : 'Prazos usados: dinheiro e Pix no mesmo dia; débito no dia útil seguinte (feriado não considerado); crédito conforme o botão acima (confirmar o contrato da maquininha); crediário fica em "a receber". As entradas das lojas são venda registrada no PDV — o dinheiro conferido depende do fechamento de caixa com valor informado. Site e Shopee entram pela aba lancamentos, como "entrada", no dia do repasse.';
 }
 
 /* ══════════════════════════════════════════
