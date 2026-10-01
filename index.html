@@ -1736,9 +1736,9 @@ function renderES(){
   const Ap = aportesFlux.filter(r=>noMes(r.data)), P = prev.filter(r=>noMes(r.data));
   const ehSoc = r => /m[aã]o de obra/i.test(r.categoria||'');
   const tMO=soma(S.filter(ehSoc)), tSop=tS-tMO;
-  const tA=soma(Ap), tP=soma(P), resOp=tE-tSop;
+  const tA=soma(Ap.filter(r=>r.data<=hoje)), tAfut=soma(Ap.filter(r=>r.data>hoje)), tP=soma(P), resOp=tE-tSop;
   const saldoAtual = abertura + resOp + tA - tMO;
-  const saldoProj  = saldoAtual - tP + tPE;
+  const saldoProj  = saldoAtual - tP + tPE + tAfut;
   // faturamento × caixa no mês de referência
   const mesRef = esState.mes==='todos' ? hoje.slice(0,7) : esState.mes;
   const fatMes = (D.canais||[]).filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)' && (r.data||'').startsWith(mesRef) && (todasLojas || (r.loja||'').toLowerCase().includes(String(esState.loja).toLowerCase().split(' ')[0])))
@@ -1755,6 +1755,7 @@ function renderES(){
     + (todasLojas?kpi('Sociedade: aportes − mão de obra', tA-tMO, `${brl(tA)} de aportes · ${brl(tMO)} de mão de obra paga`, tA-tMO<0?'es-neg':''):'')
     + kpi((esState.mes==='todos'||esState.mes===hoje.slice(0,7)?'Saldo atual':'Saldo antes das contas')+(temSaldoIni||!todasLojas?'':' · variação'), saldoAtual, 'início + operação + sociedade', saldoAtual<0?'es-neg':'')
     + (temContas?kpi('A pagar', tP, `${P.length} contas${P.some(r=>r.vencida)?` · ${P.filter(r=>r.vencida).length} vencidas`:''}`):kpi('A receber · crediário', tRec, 'venda sem dinheiro ainda'))
+    + (temContas&&tAfut?kpi('Aportes previstos', tAfut, 'lançados na aba contas com data futura', 'es-pos'):'')
     + (temContas&&esState.proj==='media'?kpi('Entradas previstas', tPE, `${brl2(media28)}/dia · média dos últimos 28 dias`, 'es-pos'):'')
     + (temContas?kpi('Saldo projetado'+(temSaldoIni||!todasLojas?'':' · variação'), saldoProj, `em ${horizonte.split('-').reverse().slice(0,2).join('/')} · ${esState.proj==='media'?'com entradas previstas':'só contas a pagar'}`, saldoProj<0?'es-neg':''):'')
     + (fatMes?`<div class="kpi"><span class="kpi-label">Faturamento × caixa · ${nomeRef}</span><span class="kpi-value">${pct(caixaMes,fatMes)}</span><span class="kpi-sub">${brl(caixaMes)} no caixa de ${brl(fatMes)} vendidos</span></div>`:'');
