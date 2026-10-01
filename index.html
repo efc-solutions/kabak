@@ -208,6 +208,17 @@ tr.es-sel td{background:var(--border)}
 #es-detalhe td small{white-space:normal}
 #inv-bars .hbar-row{grid-template-columns:200px 1fr 120px}
 #inv-bars .hbar-row{padding:4px 0}
+canvas{max-width:100%}
+.topbar-upd{margin-left:auto;padding:0 16px;font-size:11px;color:#a9a9a4;white-space:nowrap;line-height:1.3;text-align:right}
+@media(max-width:900px){.topbar-upd{display:none}}
+.kpi-grupo{margin-bottom:14px}
+.kpi-grupo-hd{display:flex;align-items:baseline;gap:10px;margin:2px 0 8px}
+.kpi-grupo-hd span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text)}
+.kpi-grupo-hd small{font-size:12px;color:var(--text3)}
+#es-kpis{display:block}
+
+@media(max-width:700px){#inv-bars .hbar-row{grid-template-columns:110px 1fr 92px;gap:6px}#inv-bars .hbar-label,#inv-bars .hbar-val{font-size:11px}}
+@media(max-width:700px){#tab-es .two-col:has(#es-diario){grid-template-columns:1fr}}
 .es-scroll thead th{position:sticky;top:0;z-index:1;background:var(--surface)}
 .es-scroll tfoot td{position:sticky;bottom:0;background:var(--surface)}
 </style>
@@ -225,6 +236,7 @@ tr.es-sel td{background:var(--border)}
     <button class="nav-tab" onclick="goTab('site',this)">🛒 Site</button>
     <button class="nav-tab" onclick="goTab('checklist',this)">✅ Checklist</button>
   </div>
+  <div class="topbar-upd" id="upd-base"></div>
 </nav>
 
 <!-- ══════════════════════════════════════
@@ -237,16 +249,8 @@ tr.es-sel td{background:var(--border)}
       <h1 class="ph-title">Faturamento</h1>
       <p class="ph-sub" id="fluxo-sub">Carregando…</p>
     </div>
-    <span class="badge-live"><span class="dot"></span> Ao vivo</span>
   </div>
-  <div class="filter-bar">
-    <span class="filter-label">Mês:</span>
-    <button class="pill active" data-mes="todos" onclick="setMes(this,'fluxo')">Todos</button>
-    <button class="pill" data-mes="2026-06" onclick="setMes(this,'fluxo')">Jun</button>
-    <button class="pill" data-mes="2026-07" onclick="setMes(this,'fluxo')">Jul</button>
-    <button class="pill" data-mes="2026-08" onclick="setMes(this,'fluxo')">Ago</button>
-    <button class="pill" data-mes="2026-09" onclick="setMes(this,'fluxo')">Set</button>
-  </div>
+  <div class="filter-bar" id="fluxo-mes-bar"></div>
   <div class="filter-bar" id="fluxo-canal-bar">
     <span class="filter-label">Canal:</span>
     <button class="pill active" data-canal="todos" onclick="setCanal(this,'fluxo')">Todos</button>
@@ -273,10 +277,7 @@ tr.es-sel td{background:var(--border)}
     <div class="chart-wrap"><canvas id="chart-meta" height="260"></canvas></div>
     <div class="table-wrap" style="margin-top:14px" id="meta-tabela"></div>
   </div>
-  <div class="section">
-    <div class="section-hd"><div><div class="section-title">Custos Fixos por Loja</div><div class="section-sub">Lançamentos mensais conhecidos · set/2026</div></div></div>
-    <div class="table-wrap" id="fluxo-custos"></div>
-  </div>
+  <div class="table-wrap" id="fluxo-custos" style="display:none"></div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -289,7 +290,7 @@ tr.es-sel td{background:var(--border)}
       <h1 class="ph-title">Fluxo de caixa</h1>
       <p class="ph-sub">Realizado e projetado · operação separada dos aportes</p>
     </div>
-    <span class="badge-live" id="es-badge"><span class="dot"></span> Ao vivo</span>
+    <span class="badge-live" id="es-badge" style="display:none"></span>
   </div>
   <div id="es-aviso"></div>
   <div class="filter-bar es-bar">
@@ -304,7 +305,7 @@ tr.es-sel td{background:var(--border)}
     <div class="es-grp" id="es-meses"></div>
     <div class="es-grp" id="es-lojas"></div>
   </div>
-  <div class="kpi-grid" id="es-kpis"><div class="loading"><span class="spinner"></span></div></div>
+  <div id="es-kpis"><div class="loading"><span class="spinner"></span></div></div>
   <div class="section">
     <div class="section-hd"><div><div class="section-title">Fluxo diário e saldo</div><div class="section-sub" id="es-chart-sub"></div></div>
       <div class="es-leg"><span><i style="background:var(--pos)"></i>Entradas</span><span><i style="background:#3b6ea5"></i>Aportes</span><span><i style="background:var(--neg)"></i>Saídas</span><span><i style="background:var(--pos);opacity:.35"></i>Entrada prevista</span><span><i style="background:var(--neg);opacity:.35"></i>A pagar</span><span><svg width="22" height="8" style="vertical-align:middle;margin-right:5px"><line x1="0" y1="4" x2="22" y2="4" stroke="currentColor" stroke-width="2"/></svg>Saldo</span></div></div>
@@ -331,7 +332,7 @@ tr.es-sel td{background:var(--border)}
     </div>
   </div>
   <div class="section">
-    <div class="section-hd"><div><div class="section-title">Consolidado por loja</div><div class="section-sub">Período e filtros selecionados</div></div></div>
+    <div class="section-hd"><div><div class="section-title">Consolidado por loja</div><div class="section-sub">Período e filtros selecionados · sem mão de obra da confecção · "Geral" = contas sem loja definida</div></div></div>
     <div class="table-wrap" id="es-lojas-tab"></div>
   </div>
   <div class="section">
@@ -354,7 +355,6 @@ tr.es-sel td{background:var(--border)}
       <h1 class="ph-title">Investimentos</h1>
       <p class="ph-sub">Aportes, tecido e mão de obra desde o início · fonte: aba investimentos</p>
     </div>
-    <span class="badge-live"><span class="dot"></span> Ao vivo</span>
   </div>
   <div id="inv-aviso"></div>
   <div class="filter-bar es-bar"><div class="es-grp" id="inv-tipos"></div><div class="es-grp" id="inv-status"></div></div>
@@ -377,7 +377,6 @@ tr.es-sel td{background:var(--border)}
       <h1 class="ph-title">Caixa do dia</h1>
       <p class="ph-sub">Faturamento do dia por loja e quanto entrou em cada forma de pagamento</p>
     </div>
-    <span class="badge-live"><span class="dot"></span> Ao vivo</span>
   </div>
   <div class="filter-bar cx-bar">
     <button class="pill" onclick="cxPasso(-1)">‹ Dia anterior</button>
@@ -406,16 +405,8 @@ tr.es-sel td{background:var(--border)}
       <h1 class="ph-title">Faturamento por Canal</h1>
       <p class="ph-sub">Participação, ticket médio e evolução</p>
     </div>
-    <span class="badge-live"><span class="dot"></span> Ao vivo</span>
   </div>
-  <div class="filter-bar">
-    <span class="filter-label">Mês:</span>
-    <button class="pill active" data-mes="todos" onclick="setMes(this,'canais')">Todos</button>
-    <button class="pill" data-mes="2026-06" onclick="setMes(this,'canais')">Jun</button>
-    <button class="pill" data-mes="2026-07" onclick="setMes(this,'canais')">Jul</button>
-    <button class="pill" data-mes="2026-08" onclick="setMes(this,'canais')">Ago</button>
-    <button class="pill" data-mes="2026-09" onclick="setMes(this,'canais')">Set</button>
-  </div>
+  <div class="filter-bar" id="canais-mes-bar"></div>
   <div class="filter-bar" id="canais-canal-bar">
     <span class="filter-label">Canal:</span>
     <button class="pill active" data-canal="todos" onclick="setCanal(this,'canais')">Todos</button>
@@ -438,6 +429,10 @@ tr.es-sel td{background:var(--border)}
     <div class="section-hd"><div><div class="section-title">Faturamento por Canal</div><div class="section-sub">Ranking com total e pedidos</div></div></div>
     <div class="table-wrap" id="canais-tabela"></div>
   </div>
+  <div class="section">
+    <div class="section-hd"><div><div class="section-title">Site: Bling × Shopify</div><div class="section-sub">Por que o número do site mudou · o painel usa o Shopify (pedido pago, venda líquida)</div></div></div>
+    <div class="table-wrap" id="canais-site-comp"></div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -450,16 +445,8 @@ tr.es-sel td{background:var(--border)}
       <h1 class="ph-title">Shopify</h1>
       <p class="ph-sub">Venda bruta, descontos, estornos e venda líquida</p>
     </div>
-    <span class="badge-live"><span class="dot"></span> Ao vivo</span>
   </div>
-  <div class="filter-bar">
-    <span class="filter-label">Mês:</span>
-    <button class="pill active" data-mes="todos" onclick="setMes(this,'site')">Todos</button>
-    <button class="pill" data-mes="2026-06" onclick="setMes(this,'site')">Jun</button>
-    <button class="pill" data-mes="2026-07" onclick="setMes(this,'site')">Jul</button>
-    <button class="pill" data-mes="2026-08" onclick="setMes(this,'site')">Ago</button>
-    <button class="pill" data-mes="2026-09" onclick="setMes(this,'site')">Set</button>
-  </div>
+  <div class="filter-bar" id="site-mes-bar"></div>
   <div id="site-debug"></div>
   <div class="kpi-grid" id="site-kpis"><div class="loading"><span class="spinner"></span></div></div>
   <div class="section">
@@ -493,7 +480,6 @@ tr.es-sel td{background:var(--border)}
       <h1 class="ph-title">Pagamentos</h1>
       <p class="ph-sub">Formas de pagamento, parcelamento e expirados</p>
     </div>
-    <span class="badge-live"><span class="dot"></span> Ao vivo</span>
   </div>
   <div class="kpi-grid" id="pag-kpis"><div class="loading"><span class="spinner"></span></div></div>
   <div class="two-col">
@@ -604,6 +590,7 @@ const SHEET_GIDS = {
   'meses-fechados':   '545345530',
   'investimentos':    '1391859058',
   'contas':           '671535924',
+  'status':           '0',
 };
 
 function parseCSVText(text) {
@@ -662,6 +649,33 @@ function goTab(id, btn){
   if(loaded) renderTab(id);
 }
 
+// meses e rótulos a partir dos dados (nada fixo em jun–set)
+const MES_ABR=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const mesLbl = m => m && /^\d{4}-\d{2}/.test(m) ? MES_ABR[+m.slice(5,7)-1]+'/'+m.slice(2,4) : m;
+const mesCurto = m => m && /^\d{4}-\d{2}/.test(m) ? MES_ABR[+m.slice(5,7)-1] : m;
+const mesAtualISO = () => esHoje().slice(0,7);
+const addMes = (m,n) => { const d=new Date(+m.slice(0,4), +m.slice(5,7)-1+n, 15); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); };
+// régua: lojas físicas e marketplaces pelo Bling; site pelo Shopify (pedido pago, venda líquida)
+const ehSiteBling = l => /site|loja virtual|e-?commerce|shopify/i.test(l||'') && !/inferido/i.test(l||'');
+function siteShopify(){
+  const sh=(D.shopify||[]).filter(r=>!('conta_como_venda' in r) || r.conta_como_venda==='sim');
+  if(!sh.length) return [];
+  const ks=Object.keys(D.shopify[0]); const nk=ks.find(k=>/net/i.test(k))||'net_sales'; const pk=ks.find(k=>/pedido|order/i.test(k)&&!/brl|valor|total|gross|net/i.test(k))||'pedidos';
+  return sh.map(r=>({data:r.data, loja:'Site', total:String(parseFloat(r[nk])||0), pedidos:String(parseInt(r[pk])||0), conta_como_venda:'sim', fonte:'shopify'}));
+}
+function vendasCanais(){
+  if(D._vc) return D._vc;
+  const base=(D.canais||[]).filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)');
+  const site=siteShopify();
+  D._vc = site.length ? [...base.filter(r=>!ehSiteBling(r.loja)), ...site].sort((a,b)=>(a.data||'').localeCompare(b.data||'')) : base;
+  return D._vc;
+}
+function mesPills(aba, rows){
+  const el=document.getElementById(aba+'-mes-bar'); if(!el) return;
+  const meses=[...new Set(rows.map(r=>(r.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
+  const cur=mesState[aba]||'todos';
+  el.innerHTML='<span class="filter-label">Mês:</span>'+['todos',...meses].map(m=>`<button class="pill${cur===m?' active':''}" data-mes="${m}" onclick="setMes(this,'${aba}')">${m==='todos'?'Todos':mesCurto(m)+(m===mesAtualISO()?' (parcial)':'')}</button>`).join('');
+}
 function setMes(btn, aba){
   btn.closest('.filter-bar').querySelectorAll('.pill[data-mes]').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
@@ -873,11 +887,12 @@ let CUSTOS_FIXOS_TOTAL_CALC = CUSTOS_FIXOS_ITEMS.reduce((s,i)=>s+i.valor,0);
 ══════════════════════════════════════════ */
 function renderFluxo(){
   const aba='fluxo';
-  const filtrado = filtCanal(filtMes(D.canais,'data',aba), aba);
+  mesPills(aba, vendasCanais());
+  const filtrado = filtCanal(filtMes(vendasCanais(),'data',aba), aba);
   const v = filtrado.filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)');
 
   // Popula barra de canais (todos os canais disponíveis nos dados, sem filtro de mês)
-  const todosCanaisDisponiveis = [...new Set(D.canais.filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)').map(r=>r.loja))].filter(Boolean).sort();
+  const todosCanaisDisponiveis = [...new Set(vendasCanais().map(r=>r.loja))].filter(Boolean).sort();
   const canalBarF = document.getElementById('fluxo-canal-bar');
   if(canalBarF){
     const cur = canalState.fluxo;
@@ -890,23 +905,23 @@ function renderFluxo(){
   const tick  = peds?tot/peds:0;
   const ch    = [...new Set(v.map(r=>r.loja))];
   const top   = ch.map(c=>({c,t:v.filter(r=>r.loja===c).reduce((s,r)=>s+(parseFloat(r.total)||0),0)})).sort((a,b)=>b.t-a.t)[0];
-  const shopFilt = filtMes(D.shopify,'data',aba);
+  const shopFilt = filtMes(D.shopify.filter(r=>!('conta_como_venda' in r) || r.conta_como_venda==='sim'),'data',aba);
   const colKeysF = D.shopify.length?Object.keys(D.shopify[0]):[];
   const netKeyF  = colKeysF.find(k=>/net/i.test(k))||'net_sales_brl';
   const shopLiq  = shopFilt.reduce((s,r)=>s+(parseFloat(r[netKeyF])||0),0);
 
-  document.getElementById('fluxo-sub').textContent = mesState.fluxo==='todos'?'Jun – Set 2026 · GitHub → Sheets':mesState.fluxo+' · GitHub → Sheets';
+  { const ms=[...new Set(vendasCanais().map(r=>(r.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
+    document.getElementById('fluxo-sub').textContent = (mesState.fluxo==='todos' ? (ms.length?mesLbl(ms[0])+' a '+mesLbl(ms.at(-1)):'') : mesLbl(mesState.fluxo)) + ' · lojas e marketplaces pelo Bling · site pelo Shopify (pago, líquido)'; }
   document.getElementById('fluxo-kpis').innerHTML=`
     <div class="kpi"><span class="kpi-label">Faturamento Total</span><span class="kpi-value">${brl(tot)}</span><span class="kpi-sub">vendas confirmadas</span></div>
     <div class="kpi"><span class="kpi-label">Pedidos</span><span class="kpi-value">${peds.toLocaleString('pt-BR')}</span><span class="kpi-sub">ticket médio ${brl2(tick)}</span></div>
     <div class="kpi"><span class="kpi-label">Canal Líder</span><span class="kpi-value" style="font-size:16px">${top?top.c:'—'}</span><span class="kpi-sub">${top?brl(top.t):''}</span></div>
-    <div class="kpi"><span class="kpi-label">Vendas Site (líq.)</span><span class="kpi-value">${brl(shopLiq)}</span><span class="kpi-sub">vendas líquidas do site</span></div>
-    <div class="kpi" style="border-left:3px solid var(--neg)"><span class="kpi-label">Custos Fixos</span><span class="kpi-value">${brl(CUSTOS_FIXOS_TOTAL_CALC)}</span><span class="kpi-sub">3 lojas · ${CUSTOS_FIXOS_ITEMS.length} lançamentos</span></div>`;
+    <div class="kpi"><span class="kpi-label">Vendas Site (líq.)</span><span class="kpi-value">${brl(shopLiq)}</span><span class="kpi-sub">vendas líquidas do site</span></div>`;
 
   // gráfico evolução — por dia quando mês filtrado, por mês quando "todos"
   const isFiltF = mesState.fluxo!=='todos';
   const aggKeyF = r=>isFiltF?(r.data?.substring(8,10)||'?'):(r.data?.substring(0,7)||'?');
-  const aggLblF = k=>isFiltF?k:(({'2026-06':'Jun','2026-07':'Jul','2026-08':'Ago','2026-09':'Set'})[k]||k);
+  const aggLblF = k=>isFiltF?k:mesCurto(k);
   const periodosF = [...new Set(v.map(r=>aggKeyF(r)))].sort();
   const canais=[...new Set(v.map(r=>r.loja))].filter(Boolean);
   const pivot={};
@@ -926,8 +941,7 @@ function renderFluxo(){
   });
   const rows=Object.values(grupos).sort((a,b)=>a.mes!==b.mes?a.mes.localeCompare(b.mes):b.total-a.total);
   const tTot=rows.reduce((s,r)=>s+r.total,0),tPed=rows.reduce((s,r)=>s+r.pedidos,0);
-  const ml={'2026-06':'Jun/26','2026-07':'Jul/26','2026-08':'Ago/26','2026-09':'Set/26 (parcial)'};
-  const fmtPer = p => isFiltF?('Dia '+p):(ml[p]||p);
+  const fmtPer = p => isFiltF?('Dia '+p):(mesLbl(p)+(p===mesAtualISO()?' (parcial)':''));
   document.getElementById('fluxo-tabela').innerHTML=`<table>
     <thead><tr><th>${isFiltF?'Dia':'Mês'}</th><th>Canal</th><th class="r">Pedidos</th><th class="r">Faturamento</th><th class="r">Ticket</th></tr></thead>
     <tbody>${rows.map(r=>`<tr><td>${fmtPer(r.mes)}</td><td><span class="ctag" style="background:${corCanal(r.loja)}18;color:${corCanal(r.loja)}">${r.loja}</span></td><td class="r">${r.pedidos.toLocaleString('pt-BR')}</td><td class="r">${brl(r.total)}</td><td class="r">${r.pedidos?brl2(r.total/r.pedidos):'—'}</td></tr>`).join('')}</tbody>
@@ -964,11 +978,11 @@ function renderFluxo(){
 ══════════════════════════════════════════ */
 function renderForecast(){
   try{ renderMeta(); }catch(e){ console.warn('renderMeta', e); }
-  const todosCanais = D.canais.filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)');
-  const MESES_HIST = ['2026-06','2026-07','2026-08','2026-09'];
-  const MESES_PROJ = ['2026-10','2026-11','2026-12'];
-  const lblMap = {'2026-06':'Jun','2026-07':'Jul','2026-08':'Ago','2026-09':'Set',
-                  '2026-10':'Out','2026-11':'Nov','2026-12':'Dez'};
+  const todosCanais = vendasCanais();
+  const _mAt = mesAtualISO();
+  const MESES_HIST = [...new Set((D.canais||[]).concat(D.shopify||[]).map(r=>(r.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m) && m<_mAt))].sort().slice(-6);
+  const MESES_PROJ = [_mAt, addMes(_mAt,1), addMes(_mAt,2)];
+  const lblMap = new Proxy({}, {get:(_,m)=>mesCurto(m)});
 
   // totais mensais históricos
   const hist = MESES_HIST.map((m,i)=>{
@@ -999,8 +1013,8 @@ function renderForecast(){
 
   // monta labels e séries para o gráfico
   const allLabels = [...MESES_HIST,...MESES_PROJ].map(m=>lblMap[m]||m);
-  const histData  = [...hist.map(h=>h.v), null, null, null];
-  const projData  = [null, null, null, null, ...projVals.map(p=>p.v)];
+  const histData  = [...hist.map(h=>h.v), ...Array(MESES_PROJ.length).fill(null)];
+  const projData  = [...Array(MESES_HIST.length).fill(null), ...projVals.map(p=>p.v)];
   // ponto de ligação: último histórico → primeiro projetado
   const linkIdx = MESES_HIST.length - 1;
   projData[linkIdx] = hist[linkIdx].v; // linha de projeção começa no último real
@@ -1110,7 +1124,7 @@ function renderForecast(){
   document.getElementById('forecast-tabela').innerHTML=`<table>
     <thead><tr><th>Mês</th><th class="r">Faturamento</th><th class="r">Tipo</th></tr></thead>
     <tbody>${allRows.map(r=>`<tr>
-      <td>${lblMap[r.m]||r.m}/26</td>
+      <td>${mesLbl(r.m)}</td>
       <td class="r" style="font-weight:600;color:${r.tipo==='proj'?'var(--pos)':'var(--text)'}">${brl(r.v)}</td>
       <td class="r"><span class="kpi-tag ${r.tipo==='proj'?'pos':'warn'}" style="font-size:11px">${r.tipo==='proj'?'Projeção':'Real'}</span></td>
     </tr>`).join('')}</tbody>
@@ -1120,7 +1134,7 @@ function renderForecast(){
 /* Real × projetado: a projeção de cada mês usa só os meses fechados ANTES dele
    (é o que se esperava para o mês na virada). Mês corrente compara com a projeção proporcional aos dias corridos. */
 function renderMeta(){
-  const vendas = D.canais.filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)' && r.data);
+  const vendas = vendasCanais().filter(r=>r.data);
   if(!vendas.length) return;
   const hoje = esHoje(), mesAtual = hoje.slice(0,7);
   const addM=(m,n)=>{const d=new Date(m+'-15T12:00:00');d.setMonth(d.getMonth()+n);return d.toISOString().slice(0,7);};
@@ -1179,10 +1193,11 @@ function renderMeta(){
 ══════════════════════════════════════════ */
 function renderCanais(){
   const aba='canais';
-  const v = filtCanal(filtMes(D.canais,'data',aba), aba).filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)');
+  mesPills(aba, vendasCanais());
+  const v = filtCanal(filtMes(vendasCanais(),'data',aba), aba);
 
   // Popula barra de canais
-  const todosCanaisC = [...new Set(D.canais.filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)').map(r=>r.loja))].filter(Boolean).sort();
+  const todosCanaisC = [...new Set(vendasCanais().map(r=>r.loja))].filter(Boolean).sort();
   const canalBarC = document.getElementById('canais-canal-bar');
   if(canalBarC){
     const cur = canalState.canais;
@@ -1231,6 +1246,20 @@ function renderCanais(){
     </tr>`).join('')}</tbody>
     <tfoot><tr><td>Total</td><td class="r">${brl(tot)}</td><td class="r">100%</td><td class="r">${peds.toLocaleString('pt-BR')}</td><td class="r">${brl2(peds?tot/peds:0)}</td></tr></tfoot>
   </table>`;
+  // comparação do site: Bling × Shopify
+  { const bl=(D.canais||[]).filter(r=>r.conta_como_venda==='sim' && ehSiteBling(r.loja));
+    const sh=(D.shopify||[]).filter(r=>!('conta_como_venda' in r) || r.conta_como_venda==='sim');
+    const ks=D.shopify.length?Object.keys(D.shopify[0]):[]; const nk=ks.find(k=>/net/i.test(k))||'net_sales', gk=ks.find(k=>/gross/i.test(k))||'gross_sales';
+    const ms=[...new Set([...bl,...sh].map(r=>(r.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
+    const sm=(a,m,k)=>a.filter(r=>(r.data||'').startsWith(m)).reduce((x,r)=>x+(parseFloat(r[k])||0),0);
+    const linhas=ms.map(m=>({m, b:sm(bl,m,'total'), g:sm(sh,m,gk), n:sm(sh,m,nk)}));
+    const tb=linhas.reduce((x,l)=>x+l.b,0), tn=linhas.reduce((x,l)=>x+l.n,0), tg=linhas.reduce((x,l)=>x+l.g,0);
+    document.getElementById('canais-site-comp').innerHTML = !bl.length ? '<p class="cx-nota">A base do Bling não tem vendas do site para comparar.</p>' : `<table>
+      <thead><tr><th>Mês</th><th class="r">Site no Bling (antes)</th><th class="r">Shopify bruta (pagos)</th><th class="r">Shopify líquida (agora)</th><th class="r">Diferença</th></tr></thead>
+      <tbody>${linhas.map(l=>`<tr><td>${mesLbl(l.m)}${l.m===mesAtualISO()?' <small style="color:var(--text3)">parcial</small>':''}</td><td class="r">${brl(l.b)}</td><td class="r" style="color:var(--text3)">${brl(l.g)}</td><td class="r"><strong>${brl(l.n)}</strong></td><td class="r ${l.n<l.b?'es-neg':'es-pos'}">${l.n>=l.b?'+':''}${brl(l.n-l.b)}${l.b?` <small>(${((l.n/l.b-1)*100).toFixed(0)}%)</small>`:''}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Total</td><td class="r">${brl(tb)}</td><td class="r">${brl(tg)}</td><td class="r">${brl(tn)}</td><td class="r">${tn>=tb?'+':''}${brl(tn-tb)}</td></tr></tfoot></table>
+      <p class="cx-nota" style="margin-top:8px">O Bling costuma somar frete e não desconta devolução; o Shopify líquido tira descontos e devoluções e não inclui frete. Por isso o número do site tende a cair na troca.</p>`;
+  }
 }
 
 
@@ -1241,6 +1270,7 @@ function renderSite(){
   const aba='site';
   // régua: só pedido que conta como venda (pago)
   const pagos = D.shopify.filter(r=>!('conta_como_venda' in r) || r.conta_como_venda==='sim');
+  mesPills(aba, pagos);
   const s = filtMes(pagos,'data',aba);
   // flexible column name matching for Shopify exports
   const colFind=(row,candidates)=>{for(const c of candidates){const v=parseFloat(row[c]);if(!isNaN(v))return v;}return 0;};
@@ -1291,8 +1321,8 @@ function renderSite(){
   // gráfico: por mês em "Todos", por dia quando filtrado
   const isFiltS=mesState.site!=='todos';
   const aggKeyS=r=>isFiltS?(r.data?.substring(8,10)||'?'):(r.data?.substring(0,7)||'?');
-  const aggLblS=k=>isFiltS?k:(({'2026-06':'Jun','2026-07':'Jul','2026-08':'Ago','2026-09':'Set'})[k]||k);
-  const periodosS=[...new Set(s.map(r=>aggKeyS(r)))].sort();
+  const aggLblS=k=>isFiltS?k:mesCurto(k);
+  const periodosS=[...new Set(s.map(r=>aggKeyS(r)))].sort().filter(k=>isFiltS || k!==mesAtualISO() || +esHoje().slice(8,10)>=10);
   const grossMes=periodosS.map(p=>s.filter(r=>aggKeyS(r)===p).reduce((x,r)=>x+(parseFloat(r[grossKey])||0),0));
   const netMes  =periodosS.map(p=>s.filter(r=>aggKeyS(r)===p).reduce((x,r)=>x+(parseFloat(r[netKey])||0),0));
   lineChart('chart-site-mes',periodosS.map(aggLblS),[
@@ -1304,18 +1334,21 @@ function renderSite(){
     <span class="legend-item"><span class="legend-dot" style="background:#2d7a4f"></span>Vendas Líquidas</span>`;
 
   // waterfall
-  hBars('waterfall-bars',[
+  hBars('waterfall-bars', semColDed ? [
+    {label:'Vendas Brutas',value:gross,fmt:brl(gross)},
+    {label:'Descontos e devoluções',value:ded,fmt:'− '+brl(ded)},
+    {label:'Vendas Líquidas',value:net,fmt:brl(net)},
+  ] : [
     {label:'Vendas Brutas',value:gross,fmt:brl(gross)},
     {label:'Descontos',value:disc,fmt:'− '+brl(disc)},
     {label:'Estornos / Devoluções',value:rev,fmt:'− '+brl(rev)},
     {label:'Vendas Líquidas',value:net,fmt:brl(net)},
-  ], l=>l==='Vendas Líquidas'?'#2d7a4f':l.startsWith('(−)')?'#b91c1c':'#1a1a1a');
+  ], l=>l==='Vendas Líquidas'?'#2d7a4f':/desconto|estorno|devolu/i.test(l)?'#b91c1c':'#1a1a1a');
 
   // tabela mensal — usa todos os meses com dados
-  const meses=['2026-06','2026-07','2026-08','2026-09'];
-  const lblMap={'2026-06':'Jun','2026-07':'Jul','2026-08':'Ago','2026-09':'Set'};
+  const meses=[...new Set(pagos.map(r=>(r.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
   document.getElementById('site-tabela').innerHTML=`<table>
-    <thead><tr><th>Mês</th><th class="r">Vendas Brutas</th><th class="r">Descontos</th><th class="r">Estornos</th><th class="r">Vendas Líquidas</th><th class="r">Pedidos</th></tr></thead>
+    <thead><tr><th>Mês</th><th class="r">Vendas brutas</th>${semColDed?'<th class="r">Descontos e devoluções</th>':'<th class="r">Descontos</th><th class="r">Estornos</th>'}<th class="r">Vendas líquidas</th><th class="r">Pedidos pagos</th></tr></thead>
     <tbody>${meses.map(m=>{
       const rows=pagos.filter(r=>r.data?.startsWith(m));
       const g=rows.reduce((x,r)=>x+(parseFloat(r[grossKey])||0),0);
@@ -1323,9 +1356,9 @@ function renderSite(){
       const rv=rows.reduce((x,r)=>x+(parseFloat(r[revKey])||0),0);
       const n=rows.reduce((x,r)=>x+(parseFloat(r[netKey])||0),0);
       const p=rows.reduce((x,r)=>x+(parseInt(r[pedKey])||0),0);
-      return`<tr><td>${lblMap[m]||m}/26</td><td class="r">${brl(g)}</td><td class="r" style="color:var(--neg)">${brl(d)}</td><td class="r" style="color:var(--neg)">${brl(rv)}</td><td class="r" style="color:var(--pos)">${brl(n)}</td><td class="r">${p.toLocaleString('pt-BR')}</td></tr>`;
+      return `<tr><td>${mesLbl(m)}${m===mesAtualISO()?' <small style="color:var(--text3)">parcial</small>':''}</td><td class="r">${brl(g)}</td>${semColDed?`<td class="r" style="color:var(--neg)">${brl(g-n)}</td>`:`<td class="r" style="color:var(--neg)">${brl(d)}</td><td class="r" style="color:var(--neg)">${brl(rv)}</td>`}<td class="r" style="color:var(--pos)">${brl(n)}</td><td class="r">${p.toLocaleString('pt-BR')}</td></tr>`;
     }).join('')}</tbody>
-    <tfoot><tr><td>Total</td><td class="r">${brl(gross)}</td><td class="r">${brl(disc)}</td><td class="r">${brl(rev)}</td><td class="r">${brl(net)}</td><td class="r">${peds.toLocaleString('pt-BR')}</td></tr></tfoot>
+    <tfoot><tr><td>Total</td><td class="r">${brl(gross)}</td>${semColDed?`<td class="r">${brl(ded)}</td>`:`<td class="r">${brl(disc)}</td><td class="r">${brl(rev)}</td>`}<td class="r">${brl(net)}</td><td class="r">${peds.toLocaleString('pt-BR')}</td></tr></tfoot>
   </table>`;
 
   requestAnimationFrame(()=>{ try{ renderSiteForecast(); }catch(e){ console.error('renderSiteForecast:',e); } });
@@ -1338,14 +1371,14 @@ function renderSiteForecast(){
   const colKeys   = D.shopify.length ? Object.keys(D.shopify[0]) : [];
   const grossKey  = colKeys.find(k=>/gross/i.test(k)) || 'gross_sales';
   const netKey    = colKeys.find(k=>/net/i.test(k))   || 'net_sales';
-  const MESES_HIST = ['2026-06','2026-07','2026-08','2026-09'];
-  const MESES_PROJ = ['2026-10','2026-11','2026-12'];
-  const lblMap = {'2026-06':'Jun','2026-07':'Jul','2026-08':'Ago','2026-09':'Set',
-                  '2026-10':'Out','2026-11':'Nov','2026-12':'Dez'};
+  const _mAt = mesAtualISO();
+  const MESES_HIST = [...new Set((D.canais||[]).concat(D.shopify||[]).map(r=>(r.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m) && m<_mAt))].sort().slice(-6);
+  const MESES_PROJ = [_mAt, addMes(_mAt,1), addMes(_mAt,2)];
+  const lblMap = new Proxy({}, {get:(_,m)=>mesCurto(m)});
 
   // totais mensais históricos (gross e net)
   const hist = MESES_HIST.map((m,i)=>{
-    const rows = D.shopify.filter(r=>r.data?.startsWith(m));
+    const rows = D.shopify.filter(r=>r.data?.startsWith(m) && (!('conta_como_venda' in r) || r.conta_como_venda==='sim'));
     const g = rows.reduce((s,r)=>s+(parseFloat(r[grossKey])||0),0);
     const n = rows.reduce((s,r)=>s+(parseFloat(r[netKey])||0),0);
     return {m, g, n, i};
@@ -1373,7 +1406,7 @@ function renderSiteForecast(){
   // setembro parcial: estima mês completo pelo dias corridos
   const hoje = new Date();
   const diasSet = (new Date(2026,8,30) - new Date(2026,8,1)) / 86400000 + 1;
-  const diaHoje = hoje.getMonth()===8 && hoje.getFullYear()===2026 ? hoje.getDate() : diasSet;
+  const diaHoje = diasSet; // só meses fechados entram no histórico — sem extrapolação
   const fatorSet = diasSet / Math.max(1, diaHoje);
   const histAdj = hist.map(h=>h.m==='2026-09' ? {...h, g:h.g*fatorSet, n:h.n*fatorSet} : h);
 
@@ -1408,10 +1441,10 @@ function renderSiteForecast(){
   const setNote = diaHoje < diasSet ? ` <span style="color:var(--text3);font-size:11px">(Set estimado: ${diasSet} dias / ${diaHoje} corridos × ${fatorSet.toFixed(2)})</span>` : '';
   document.getElementById('site-forecast-sub').textContent='';
   document.getElementById('site-forecast-sub').innerHTML=
-    `Regressão linear sobre Jun–Set · crescimento mensal estimado ${b>0?'+':''}${brl(b)}/mês${setNote}`;
+    `Regressão linear sobre ${mesLbl(MESES_HIST[0])} a ${mesLbl(MESES_HIST.at(-1))} (meses fechados, só pedidos pagos) · crescimento mensal estimado ${b>0?'+':''}${brl(b)}/mês${setNote}`;
 
   // tabela resumo
-  const mlbl={'2026-06':'Jun/26','2026-07':'Jul/26','2026-08':'Ago/26','2026-09':'Set/26 (parcial)','2026-10':'Out/26','2026-11':'Nov/26','2026-12':'Dez/26'};
+  const mlbl=new Proxy({}, {get:(_,m)=>mesLbl(m)});
   const linhasHist = histAdj.map(h=>`<tr>
     <td>${mlbl[h.m]||h.m}</td>
     <td class="r">${brl(h.g)}</td>
@@ -1428,10 +1461,10 @@ function renderSiteForecast(){
     </tr>`;
   }).join('');
   document.getElementById('site-forecast-tabela').innerHTML=`<table>
-    <thead><tr><th>Mês</th><th class="r">Bruta</th><th class="r">Líquida</th><th class="r">Var. vs Set</th></tr></thead>
+    <thead><tr><th>Mês</th><th class="r">Bruta</th><th class="r">Líquida</th><th class="r">Var. vs ${mesCurto(MESES_HIST.at(-1))}</th></tr></thead>
     <tbody>${linhasHist}${linhasProj}</tbody>
   </table>
-  <p style="font-size:11px;color:var(--text3);margin-top:8px">★ Projeção por regressão linear — Set/26 extrapolado para mês completo. Não considera sazonalidade.</p>`;
+  <p style="font-size:11px;color:var(--text3);margin-top:8px">★ Projeção por regressão linear sobre os meses fechados. Não considera sazonalidade (Black Friday, Natal).</p>`;
 }
 
 /* ══════════════════════════════════════════
@@ -1663,7 +1696,7 @@ function esChart(lin, h=280){
   lin.forEach((l,i)=>{ctx.beginPath();ctx.arc(X(i),Y(l.acc),2.5,0,Math.PI*2);ctx.fillStyle=l.acc<0?neg:tok('--text');ctx.fill();});
   const last=lin[lin.length-1]; ctx.fillStyle=last.acc<0?neg:tok('--text');ctx.font='bold 10px Inter,sans-serif';ctx.textAlign='right';
   ctx.fillText(brl(last.acc),X(lin.length-1),Y(last.acc)-8);
-  const skip=Math.ceil(lin.length/14);
+  const skip=Math.ceil(lin.length/Math.max(4,Math.floor(cW/60)));
   ctx.fillStyle=tok('--text3');ctx.font='10px Inter,sans-serif';ctx.textAlign='center';
   lin.forEach((l,i)=>{ if(i%skip===0&&(lin.length-1-i>=skip||i===lin.length-1)||i===lin.length-1) ctx.fillText(l.d.slice(8,10)+'/'+l.d.slice(5,7),X(i),H-10); });
 }
@@ -1687,7 +1720,7 @@ function renderES(){
     if(ES.exemplo.lanc)  av.push('A aba <b>contas</b> ainda não existe: as saídas são só as sangrias desses fechamentos.');
   }
   document.getElementById('es-aviso').innerHTML = av.length?`<div class="es-aviso">${av.join('<br>')}</div>`:'';
-  document.getElementById('es-badge').innerHTML = av.length?'Exemplo':'<span class="dot"></span> Ao vivo';
+  { const bd=document.getElementById('es-badge'); bd.textContent = av.length?'Dados de exemplo':''; bd.style.display = av.length?'':'none'; bd.style.background='var(--warn-bg)'; bd.style.color='var(--warn)'; }
 
   // filtros de mês e loja (montados a partir dos dados)
   const hojeM=esHoje();
@@ -1740,25 +1773,18 @@ function renderES(){
   const saldoAtual = abertura + resOp + tA - tMO;
   const saldoProj  = saldoAtual - tP + tPE + tAfut;
   // faturamento × caixa no mês de referência
-  const mesRef = esState.mes==='todos' ? hoje.slice(0,7) : esState.mes;
-  const fatMes = (D.canais||[]).filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)' && (r.data||'').startsWith(mesRef) && (todasLojas || (r.loja||'').toLowerCase().includes(String(esState.loja).toLowerCase().split(' ')[0])))
+  const mesRef = esState.mes!=='todos' ? esState.mes : (+hoje.slice(8,10)<10 ? addMes(hoje.slice(0,7),-1) : hoje.slice(0,7));
+  const fatMes = vendasCanais().filter(r=>(r.data||'').startsWith(mesRef) && (todasLojas || (r.loja||'').toLowerCase().includes(String(esState.loja).toLowerCase().split(' ')[0])))
                   .reduce((a,r)=>a+(parseFloat(r.total)||0),0);
   const caixaMes = soma(entL.filter(r=>(r.data||'').startsWith(mesRef)));
   const nomeRef = new Date(mesRef+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'long'});
 
   const kpi=(l,v,sub,cls='')=>`<div class="kpi"><span class="kpi-label">${l}</span><span class="kpi-value ${cls}">${brl2(v)}</span><span class="kpi-sub">${sub}</span></div>`;
+  const grupo=(titulo,sub,itens)=>{ const h=itens.filter(Boolean).join(''); return h?`<div class="kpi-grupo"><div class="kpi-grupo-hd"><span>${titulo}</span><small>${sub}</small></div><div class="kpi-grid">${h}</div></div>`:''; };
   document.getElementById('es-kpis').innerHTML =
-      kpi(esState.mes==='todos'?'Saldo inicial':'Saldo no início do mês', abertura, !todasLojas?'filtro por loja parte do zero':temSaldoIni?`conta da Kabak em ${ES.saldoIni.data?ES.saldoIni.data.split('-').reverse().join('/'):'—'}`:'<span style="color:var(--warn)">saldo da conta não informado · valores abaixo = variação desde 01/09</span>')
-    + kpi('Entradas da operação', tE, temContas?'site + Pix e cartão das lojas':(tFut?`${brl2(tFut)} ainda vão cair`:'todas já caíram'), 'es-pos')
-    + kpi('Saídas da operação', tSop, `${S.filter(r=>!ehSoc(r)).length} lançamentos · sem mão de obra da confecção`, 'es-neg')
-    + kpi('Resultado da operação', resOp, 'vendas − despesas, sem aportes e sem mão de obra', resOp<0?'es-neg':'')
-    + (todasLojas?kpi('Sociedade: aportes − mão de obra', tA-tMO, `${brl(tA)} de aportes · ${brl(tMO)} de mão de obra paga`, tA-tMO<0?'es-neg':''):'')
-    + kpi((esState.mes==='todos'||esState.mes===hoje.slice(0,7)?'Saldo atual':'Saldo antes das contas')+(temSaldoIni||!todasLojas?'':' · variação'), saldoAtual, 'início + operação + sociedade', saldoAtual<0?'es-neg':'')
-    + (temContas?kpi('A pagar', tP, `${P.length} contas${P.some(r=>r.vencida)?` · ${P.filter(r=>r.vencida).length} vencidas`:''}`):kpi('A receber · crediário', tRec, 'venda sem dinheiro ainda'))
-    + (temContas&&tAfut?kpi('Aportes previstos', tAfut, 'lançados na aba contas com data futura', 'es-pos'):'')
-    + (temContas&&esState.proj==='media'?kpi('Entradas previstas', tPE, `${brl2(media28)}/dia · média dos últimos 28 dias`, 'es-pos'):'')
-    + (temContas?kpi('Saldo projetado'+(temSaldoIni||!todasLojas?'':' · variação'), saldoProj, `em ${horizonte.split('-').reverse().slice(0,2).join('/')} · ${esState.proj==='media'?'com entradas previstas':'só contas a pagar'}`, saldoProj<0?'es-neg':''):'')
-    + (fatMes?`<div class="kpi"><span class="kpi-label">Faturamento × caixa · ${nomeRef}</span><span class="kpi-value">${pct(caixaMes,fatMes)}</span><span class="kpi-sub">${brl(caixaMes)} no caixa de ${brl(fatMes)} vendidos</span></div>`:'');
+      grupo('Operação', 'vendas e despesas do dia a dia', [kpi('Entradas da operação', tE, temContas?'site + Pix e cartão das lojas':(tFut?`${brl2(tFut)} ainda vão cair`:'todas já caíram'), 'es-pos'), kpi('Saídas da operação', tSop, `${S.filter(r=>!ehSoc(r)).length} lançamentos · sem mão de obra da confecção`, 'es-neg'), kpi('Resultado da operação (pago)', resOp, 'só o que já saiu · pelo vencimento, ver "mês a mês" abaixo', resOp<0?'es-neg':''), (fatMes?`<div class="kpi"><span class="kpi-label">Faturamento × caixa · ${nomeRef}</span><span class="kpi-value">${pct(caixaMes,fatMes)}</span><span class="kpi-sub">${brl(caixaMes)} no caixa de ${brl(fatMes)} vendidos</span></div>`:'')])
+    + grupo('Sociedade', 'aportes e mão de obra da confecção', [(todasLojas?kpi('Sociedade: aportes − mão de obra', tA-tMO, `${brl(tA)} de aportes · ${brl(tMO)} de mão de obra paga`, tA-tMO<0?'es-neg':''):''), (temContas&&tAfut?kpi('Aportes previstos', tAfut, 'lançados na aba contas com data futura', 'es-pos'):'')])
+    + grupo('Caixa e projeção', 'saldo hoje e até a última conta lançada', [kpi(esState.mes==='todos'?'Saldo inicial':'Saldo no início do mês', abertura, !todasLojas?'filtro por loja parte do zero':temSaldoIni?`conta da Kabak em ${ES.saldoIni.data?ES.saldoIni.data.split('-').reverse().join('/'):'—'}`:'<span style="color:var(--warn)">saldo da conta não informado · valores abaixo = variação desde 01/09</span>'), kpi((esState.mes==='todos'||esState.mes===hoje.slice(0,7)?'Saldo atual':'Saldo antes das contas')+(temSaldoIni||!todasLojas?'':' · variação'), saldoAtual, 'início + operação + sociedade', saldoAtual<0?'es-neg':''), (temContas?kpi('A pagar', tP, `${P.length} contas${P.some(r=>r.vencida)?` · ${P.filter(r=>r.vencida).length} vencidas`:''}`):kpi('A receber · crediário', tRec, 'venda sem dinheiro ainda')), (temContas&&esState.proj==='media'?kpi('Entradas previstas', tPE, `${brl2(media28)}/dia · média dos últimos 28 dias`, 'es-pos'):''), (temContas?kpi('Saldo projetado'+(temSaldoIni||!todasLojas?'':' · variação'), saldoProj, `em ${horizonte.split('-').reverse().slice(0,2).join('/')} · ${esState.proj==='media'?'com entradas previstas':'só contas a pagar'}`, saldoProj<0?'es-neg':''):'')]);
 
   // série diária
   const dias=[...new Set([...E,...S,...Ap,...P,...PE].map(r=>r.data).filter(Boolean))].sort();
@@ -1821,12 +1847,13 @@ function renderES(){
   oc.textContent = restoC.length ? 'Outros: '+restoC.map(([k,x])=>`${k} ${brl(x)}`).join(' · ') : '';
 
   // consolidado por loja
-  const lj=[...new Set([...E,...S].map(r=>r.loja))].sort();
+  const Sop=S.filter(r=>!ehSoc(r)), tSo=soma(Sop);
+  const lj=[...new Set([...E,...Sop].map(r=>r.loja))].sort();
   document.getElementById('es-lojas-tab').innerHTML = `<table>
     <thead><tr><th>Loja</th><th class="r">Entradas</th><th class="r">Saídas</th><th class="r">Saldo</th>${temContas?'':'<th class="r">A receber (crediário)</th>'}</tr></thead>
-    <tbody>${lj.map(l=>{const e=soma(E.filter(r=>r.loja===l)),s=soma(S.filter(r=>r.loja===l)),rc=soma(R.filter(r=>r.loja===l));
+    <tbody>${lj.map(l=>{const e=soma(E.filter(r=>r.loja===l)),s=soma(Sop.filter(r=>r.loja===l)),rc=soma(R.filter(r=>r.loja===l));
       return `<tr><td>${l}</td><td class="r">${brl2(e)}</td><td class="r">${s?brl2(s):'—'}</td><td class="r ${e-s<0?'es-neg':''}"><strong>${brl2(e-s)}</strong></td>${temContas?'':`<td class="r">${rc?brl2(rc):'—'}</td>`}</tr>`}).join('')}</tbody>
-    <tfoot><tr><td>Total</td><td class="r">${brl2(tE)}</td><td class="r">${brl2(tS)}</td><td class="r">${brl2(tE-tS)}</td>${temContas?'':`<td class="r">${brl2(tRec)}</td>`}</tr></tfoot></table>`;
+    <tfoot><tr><td>Total</td><td class="r">${brl2(tE)}</td><td class="r">${brl2(tSo)}</td><td class="r">${brl2(tE-tSo)}</td>${temContas?'':`<td class="r">${brl2(tRec)}</td>`}</tr></tfoot></table>`;
 
   // contas a pagar e pagas por fora (só com a aba contas)
   let apHtml='';
@@ -1853,9 +1880,10 @@ function renderES(){
       const opE = entL.map(r=>({...r, mes:(r.data||'').slice(0,7)}));
       const m0=opE.map(r=>r.mes).filter(Boolean).sort()[0]||'';
       const meses=[...new Set([...opE,...opS,...opP].map(r=>r.mes).filter(m=>m && m>=m0 && m<=hoje.slice(0,7)))].sort();
-      const linhas=meses.map(m=>{ const e=soma(opE.filter(r=>r.mes===m)), sp=soma(opS.filter(r=>r.mes===m)), ap=soma(opP.filter(r=>r.mes===m));
+      const prevMes = m => m===hoje.slice(0,7) && esState.proj==='media' ? soma(prevEnt.filter(r=>(r.data||'').startsWith(m))) : 0;
+      const linhas=meses.map(m=>{ const pe=prevMes(m), e=soma(opE.filter(r=>r.mes===m))+pe, sp=soma(opS.filter(r=>r.mes===m)), ap=soma(opP.filter(r=>r.mes===m));
         const mo=soma(saiL.filter(r=>ehSoc(r)&&(r.data||'').startsWith(m))), apo=soma(aportesFlux.filter(r=>(r.data||'').startsWith(m)));
-        return {m,e,sp,ap,res:e-sp-ap,mo,apo,parcial:m===hoje.slice(0,7)}; });
+        return {m,e,pe,sp,ap,res:e-sp-ap,mo,apo,parcial:m===hoje.slice(0,7)}; });
       document.getElementById('es-mensal-base').innerHTML='<span class="es-lbl">Despesa pelo</span>'+[['competencia','Vencimento (pagas + a pagar)'],['caixa','Pagamento (só pagas)']].map(([v,t])=>`<button class="pill${esState.comp===v?' active':''}" data-v="${v}" onclick="esSet('comp',this)">${t}</button>`).join('');
       document.getElementById('es-mensal-sub').textContent = comp
         ? 'Entradas no caixa − despesas do mês pelo vencimento, pagas ou não · sem aportes e sem mão de obra da confecção'
@@ -1879,7 +1907,7 @@ function renderES(){
       document.getElementById('es-mensal').innerHTML = linhas.length ? `<table>
         <thead><tr><th>Mês</th><th class="r">Entradas</th><th class="r">Despesas pagas</th>${comp?'<th class="r">Despesas a pagar</th>':''}<th class="r">Resultado da operação</th><th class="r">Mão de obra paga</th><th class="r">Aportes</th></tr></thead>
         <tbody>${linhas.map(l=>`<tr><td>${new Date(l.m+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})}${l.parcial?' <small style="color:var(--text3)">parcial</small>':''}</td>
-          <td class="r">${brl2(l.e)}</td><td class="r">−${brl2(l.sp)}</td>${comp?`<td class="r">${l.ap?'−'+brl2(l.ap):'—'}</td>`:''}<td class="r ${l.res<0?'es-neg':'es-pos'}"><strong>${brl2(l.res)}</strong></td>
+          <td class="r">${brl2(l.e)}${l.pe?`<br><small style="color:var(--text3)">${brl(l.pe)} previstos</small>`:''}</td><td class="r">−${brl2(l.sp)}</td>${comp?`<td class="r">${l.ap?'−'+brl2(l.ap):'—'}</td>`:''}<td class="r ${l.res<0?'es-neg':'es-pos'}"><strong>${brl2(l.res)}</strong></td>
           <td class="r" style="color:var(--text3)">${l.mo?'−'+brl2(l.mo):'—'}</td><td class="r" style="color:var(--text3)">${l.apo?brl2(l.apo):'—'}</td></tr>`).join('')}</tbody></table>
         <p class="cx-nota" style="margin-top:8px">O histórico começa no primeiro mês lançado na aba contas. Para ver junho a agosto, basta lançar esses meses na mesma aba. O resultado é de caixa (não é lucro contábil): não desconta estoque consumido nem impostos que ainda não venceram.</p>`
         : '<p class="cx-nota">Sem meses lançados na aba contas.</p>';
@@ -1923,7 +1951,7 @@ function renderInv(){
   const tipos=[...new Set(todos.map(r=>r.tipo))], status=[...new Set(todos.map(r=>r.status))];
   const pill=(k,v,t)=>`<button class="pill${invState[k]===v?' active':''}" data-v="${v}" onclick="invSet('${k}',this)">${t}</button>`;
   document.getElementById('inv-tipos').innerHTML='<span class="es-lbl">Tipo</span>'+pill('tipo','todos','Todos')+tipos.map(t=>pill('tipo',t,t)).join('');
-  document.getElementById('inv-status').innerHTML='<span class="es-lbl">Status</span>'+pill('status','todos','Todos')+status.map(t=>pill('status',t,t)).join('');
+  document.getElementById('inv-status').innerHTML='<span class="es-lbl">Status</span><select class="cx-date" onchange="invState.status=this.value;renderInv()">'+['todos',...status].map(t=>`<option value="${t}"${invState.status===t?' selected':''}>${t==='todos'?'Todos os status':t}</option>`).join('')+'</select>';
   const R = todos.filter(r=>(invState.tipo==='todos'||r.tipo===invState.tipo)&&(invState.status==='todos'||r.status===invState.status));
   const soma=a=>a.filter(r=>!invNaoSoma(r)).reduce((x,r)=>x+r.valor,0);
   const porTipo=tipos.map(t=>({t, v:soma(R.filter(r=>r.tipo===t)), n:R.filter(r=>r.tipo===t && !invNaoSoma(r)).length})).filter(x=>x.n);
@@ -1985,6 +2013,7 @@ function cxRotulo(r){
   let f = nomes[0];
   const p = parseInt(r.parcelas)||1;
   if(/cr[eé]dito/i.test(f) && !/d[eé]bito/i.test(f)) f = p>1 ? `Crédito ${p}x` : 'Crédito à vista';
+  else if(/d[eé]bito/i.test(f)) f='Débito'; else if(/^pix$/i.test(f)) f='Pix'; else if(/^dinheiro$/i.test(f)) f='Dinheiro';
   return f;
 }
 function cxVendas(){ return (D.pedidos||[]).filter(r=>r.conta_como_venda==='sim' && ehLojaFisica(r.loja) && r.data); }
@@ -2311,6 +2340,7 @@ async function init(){
           return !chavesPresentes.has(chave);
         });
         D.canais = [...novas, ...D.canais].sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+        D._vc = null;
         console.log(`meses-fechados: adicionados ${novas.length} registros (de ${fechadosN.length} total)`);
       }
     }
@@ -2319,13 +2349,23 @@ async function init(){
     if(canaisN.length === 0 && pedidosN.length === 0){
       const banner = document.createElement('div');
       banner.style.cssText = 'background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;margin:16px;font-size:13px;line-height:1.5;';
-      banner.innerHTML = `<strong>⚠️ API temporariamente indisponível</strong><br>
-        Os dados não carregaram do Google Sheets. O dashboard está em modo offline.<br>
-        <small>Para corrigir: abra o Apps Script → Implantações → verifique se a implantação web ainda está ativa.</small>`;
+      banner.innerHTML = `<strong>⚠️ Os dados não carregaram da planilha</strong><br>
+        O painel não conseguiu ler a Kabak - Base no Google Sheets.<br>
+        <small>Confira se a planilha continua compartilhada como "Qualquer pessoa com o link pode ver" e recarregue a página.</small>`;
       (document.querySelector('.main-content') || document.body).prepend(banner);
     }
 
     await esCarregar();
+    // data da última atualização da base (aba de status) e da última venda
+    try{
+      const st = await safeCSV('status');
+      const txt = JSON.stringify(st);
+      const m = txt.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})/);
+      const ult = vendasCanais().map(r=>r.data).filter(Boolean).sort().pop();
+      const el = document.getElementById('upd-base');
+      if(el) el.innerHTML = (m?`Base atualizada em ${m[1].slice(0,5)} às ${m[2]}`:'Base: data de atualização não encontrada') + (ult?`<br>Última venda: ${ult.split('-').reverse().slice(0,2).join('/')}`:'');
+      if(m){ const [d,mo,y]=m[1].split('/'); const dt=new Date(`${y}-${mo}-${d}T${m[2]}:00`); if((Date.now()-dt)/36e5>30 && el) el.style.color='#f59e0b'; }
+    }catch(e){ console.warn('status', e); }
     loaded=true;
     renderES();
     ckRender();
@@ -2335,7 +2375,7 @@ async function init(){
     const banner = document.createElement('div');
     banner.style.cssText = 'background:#f8d7da;color:#842029;border:1px solid #f5c2c7;border-radius:8px;padding:12px 16px;margin:16px;font-size:13px;line-height:1.5;';
     banner.innerHTML = `<strong>Erro ao carregar dados:</strong> ${e.message}<br>
-      <small>Verifique se o Apps Script está implantado e o Sheets está público ("Qualquer pessoa na internet pode ver").</small>`;
+      <small>Confira se a planilha continua compartilhada como "Qualquer pessoa com o link pode ver" e recarregue a página.</small>`;
     (document.querySelector('.main-content') || document.body).prepend(banner);
     D={canais:[], pedidos:[], formas:[], shopify:[]};
     loaded=true;
