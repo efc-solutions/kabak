@@ -58,7 +58,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow)}
 .kpi-label{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text3)}
-.kpi-value{font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.2}
+.kpi-value{font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums;line-height:1.2;white-space:nowrap}
 .kpi-sub{font-size:12px;color:var(--text2)}
 .kpi-tag{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;width:fit-content}
 .kpi-tag.pos{background:var(--pos-bg);color:var(--pos)}
@@ -1545,7 +1545,7 @@ function esCategoria(desc, ehEntrada){
   }
   const R=[[/TRAFEGO/,'Anúncio (tráfego)'],[/TIT+ANIUM/,'Agência (Titanium)'],[/FRENET|TRANSPORTADORA|CORREIOS/,'Frete'],[/ALUGUEL/,'Aluguel'],
     [/VIVO|INTERNET|CEMIG|COPASA|ENERGIA|AGUA/,'Contas de consumo'],[/\bDAS\b|INSS|FAZENDA|FAZEENDA|IMPOSTO/,'Impostos'],[/CONTADOR/,'Contador'],
-    [/BLING|RD STATION|TROQUE|TREINAMENTO|SHOPIFY/,'Sistemas'],[/MAO DE OBRA/,'Mão de obra'],[/PROLABORE|PRO LABORE/,'Pró-labore'],
+    [/BLING|RD STATION|TROQUE|TREINAMENTO|SHOPIFY/,'Sistemas'],[/MAO DE OBRA/,'Mão de obra'],[/PAGAMENTOS DA EQUIPE|PROLABORE|PRO LABORE/,'Equipe'],
     [/DUDA|SALARIO|FOLHA/,'Equipe'],[/FACHADA/,'Obra loja Pouso Alegre'],[/FORMOSA/,'Material loja'],[/CARTAO/,'Cartão: tráfego e apps'],[/TECIDO/,'Tecido']];
   for(const [rx,c] of R) if(rx.test(d)) return ['saida',c];
   return ['saida','Outros'];
@@ -1563,7 +1563,7 @@ function esLerContas(rows){
   const k = r => { const n={}; for(const c in r) n[esSemAcento(c)] = r[c]; return n; };
   const lanc=[], aportes=[], aPagar=[], porFora=[]; let saldoIni=null;
   rows.map(k).forEach(r=>{
-    const desc=(r['pagamento']||'').trim(); if(!desc || /^total$/i.test(desc)) return;
+    let desc=(r['pagamento']||'').trim(); if(!desc || /^total$/i.test(desc)) return;
     if(/saldo inicial/i.test(desc)){ const v=parseFloat(normNum(r['entrada']))||parseFloat(normNum(r['valor']))||0; saldoIni={data:normData(r['data vencimento'])||normData(r['data pagamento']), valor:v}; return; }
     const venc=normData(r['data vencimento']), pagRaw=(r['data pagamento']||'').trim(), pag=normData(pagRaw);
     const ehData=/^\d{4}-\d{2}-\d{2}$/.test(pag);
@@ -1571,6 +1571,7 @@ function esLerContas(rows){
     let valor=parseFloat(normNum(r['saida']))||parseFloat(normNum(r['valor']))||0;
     // pagamento de mão de obra lançado por engano na coluna de entrada → é saída
     if(entrada>0 && !valor && /m[aã]o de obra/i.test(desc) && !/investimento|aporte/i.test(desc)){ valor=entrada; entrada=0; }
+    if(/pro ?-?labore|pagamento duda/i.test(esSemAcento(desc))) desc = /estimad/i.test(desc) ? 'PAGAMENTOS DA EQUIPE (ESTIMADO)' : 'PAGAMENTOS DA EQUIPE';
     const [tipo,cat]=esCategoria(desc, entrada>0);
     const loja=esLojaDe(desc);
     if(tipo==='aporte'){ const mo=/m[aã]o de obra/i.test(desc); aportes.push({data:ehData?pag:venc, origem:desc.replace(/ENTRADA|INVESTIMENTO|-|M[AÃ]O DE OBRA/gi,'').trim()||'—', tipo:mo?'para mão de obra':'dinheiro', descricao:desc, valor:entrada||valor}); return; }
@@ -1582,6 +1583,11 @@ function esLerContas(rows){
     if(ehData && !copiada) lanc.push({data:pag, venc:venc||pag, tipo:'saida', categoria:cat, loja, descricao:desc, valor});
     else aPagar.push({data:venc, categoria:cat, loja, descricao:desc, valor, obs: copiada?'data de pagamento parece copiada do mês anterior':''});
   });
+  // pagamentos da equipe: um lançamento por dia, sem nomes nem valores individuais
+  const junta = arr => { const out=[], m={};
+    arr.forEach(r=>{ if(/^PAGAMENTOS DA EQUIPE/.test(r.descricao||'')){ const k=(r.data||'')+'|'+r.tipo+'|'+r.descricao; if(m[k]){ m[k].valor+=r.valor; return; } m[k]={...r}; out.push(m[k]); } else out.push(r); });
+    return out; };
+  lanc.splice(0, lanc.length, ...junta(lanc)); aPagar.splice(0, aPagar.length, ...junta(aPagar));
   const pagMO = lanc.filter(l=>l.tipo==='saida' && /m[aã]o de obra/i.test(l.categoria)).sort((a,b)=>a.data.localeCompare(b.data));
   const pagMOfut = aPagar.filter(l=>/m[aã]o de obra/i.test(l.categoria));
   let nParc=0;
@@ -2365,9 +2371,12 @@ async function init(){
     await esCarregar();
     // data da última atualização da base (aba de status) e da última venda
     try{
-      const st = await safeCSV('status');
-      const txt = JSON.stringify(st);
-      const m = txt.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})/);
+      let txt = JSON.stringify(await safeCSV('status'));
+      let m = txt.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})/);
+      if(!m){ // a aba de status é a 1ª da planilha: lê pelo gviz, sem depender do gid
+        try{ const r = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=0&headers=0`, {cache:'no-cache'});
+             if(r.ok){ txt = await r.text(); m = txt.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})/); } }catch(e){}
+      }
       const ult = vendasCanais().map(r=>r.data).filter(Boolean).sort().pop();
       const el = document.getElementById('upd-base');
       if(el) el.innerHTML = (m?`Base atualizada em ${m[1].slice(0,5)} às ${m[2]}`:'Base: data de atualização não encontrada') + (ult?`<br>Última venda: ${ult.split('-').reverse().slice(0,2).join('/')}`:'');
