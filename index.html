@@ -603,6 +603,7 @@ const SHEET_GIDS = {
   'custos-fixos':     '466747987',
   'meses-fechados':   '545345530',
   'investimentos':    '1391859058',
+  'contas':           '671535924',
 };
 
 function parseCSVText(text) {
@@ -1572,7 +1573,7 @@ async function esAba(nome, colsObrigatorias){
 }
 async function esCarregar(){
   const [ct, cx, lc, ap] = await Promise.all([
-    esAba('contas', ['data vencimento','pagamento']),
+    safeCSV('contas').then(r=>{ const ok=r.length && ['data vencimento','pagamento'].every(c=>Object.keys(r[0]).map(esSemAcento).includes(c)); return ok ? r : esAba('contas', ['data vencimento','pagamento']); }),
     esAba('caixa-lojas', ['data','loja','forma','valor']),
     esAba('lancamentos', ['data','tipo','valor']),
     esAba('aportes', ['data','valor']),
