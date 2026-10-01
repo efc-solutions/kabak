@@ -206,6 +206,8 @@ tr.es-sel td{background:var(--border)}
 @media(max-width:900px){#tab-es .two-col:has(#es-diario){grid-template-columns:1fr}}
 #es-detalhe{overflow-x:auto}
 #es-detalhe td small{white-space:normal}
+#inv-bars .hbar-row{grid-template-columns:200px 1fr 120px}
+#inv-bars .hbar-row{padding:4px 0}
 .es-scroll thead th{position:sticky;top:0;z-index:1;background:var(--surface)}
 .es-scroll tfoot td{position:sticky;bottom:0;background:var(--surface)}
 </style>
@@ -333,7 +335,7 @@ tr.es-sel td{background:var(--border)}
     <div class="table-wrap" id="es-lojas-tab"></div>
   </div>
   <div class="section">
-    <div class="section-hd"><div><div class="section-title">Aportes</div><div class="section-sub">Entram no saldo, mas não no resultado da operação</div></div></div>
+    <div class="section-hd"><div><div class="section-title">Aportes</div><div class="section-sub">Entram no saldo, mas não no resultado da operação · os usados para pagar a mão de obra aparecem marcados</div></div></div>
     <div class="table-wrap" id="es-aportes"></div>
   </div>
   <div class="section" id="es-mensal-sec">
@@ -358,8 +360,8 @@ tr.es-sel td{background:var(--border)}
   <div class="filter-bar es-bar"><div class="es-grp" id="inv-tipos"></div><div class="es-grp" id="inv-status"></div></div>
   <div class="kpi-grid" id="inv-kpis"><div class="loading"><span class="spinner"></span></div></div>
   <div class="section">
-    <div class="section-hd"><div><div class="section-title">Acumulado por tipo</div><div class="section-sub">Soma ao longo do tempo, pela data de cada evento</div></div><div class="es-leg" id="inv-leg"></div></div>
-    <canvas id="inv-chart"></canvas>
+    <div class="section-hd"><div><div class="section-title">Valor por tipo</div><div class="section-sub" id="inv-bar-sub">Só o que entra em soma · tipos diferentes lado a lado, sem somar entre si</div></div></div>
+    <div class="hbar-wrap" id="inv-bars"></div>
   </div>
   <div class="section">
     <div class="section-hd"><div><div class="section-title">Linha do tempo</div><div class="section-sub">Um evento por linha, na ordem em que aconteceu</div></div></div>
@@ -1236,7 +1238,9 @@ function renderCanais(){
 ══════════════════════════════════════════ */
 function renderSite(){
   const aba='site';
-  const s = filtMes(D.shopify,'data',aba);
+  // régua: só pedido que conta como venda (pago)
+  const pagos = D.shopify.filter(r=>!('conta_como_venda' in r) || r.conta_como_venda==='sim');
+  const s = filtMes(pagos,'data',aba);
   // flexible column name matching for Shopify exports
   const colFind=(row,candidates)=>{for(const c of candidates){const v=parseFloat(row[c]);if(!isNaN(v))return v;}return 0;};
   const colKeys=D.shopify.length?Object.keys(D.shopify[0]):[];
@@ -1251,13 +1255,25 @@ function renderSite(){
   const net   = s.reduce((x,r)=>x+(parseFloat(r[netKey])||0),0);
   const peds  = s.reduce((x,r)=>x+(parseInt(r[pedKey])||0),0);
   const txDesc= gross?((disc/gross)*100).toFixed(1)+'%':'—';
+  const semColDed = !colKeys.some(k=>/discount|reversal|refund|devoluc/i.test(k));
+  const ded = gross-net;
+  // melhor mês pela venda líquida (todos os meses, independente do filtro)
+  const porMes={}; pagos.forEach(r=>{const m=(r.data||'').slice(0,7); if(m) porMes[m]=(porMes[m]||0)+(parseFloat(r[netKey])||0);});
+  const mesesS=Object.keys(porMes).sort(), mAtual=esHoje().slice(0,7);
+  const fechados=mesesS.filter(m=>m<mAtual);
+  const melhor=(fechados.length?fechados:mesesS).reduce((a,m)=>porMes[m]>(porMes[a]||-1)?m:a, null);
+  const ant=melhor?mesesS[mesesS.indexOf(melhor)-1]:null;
+  const nomeM=m=>{const t=new Date(m+'-15T12:00:00').toLocaleDateString('pt-BR',{month:'long'}); return t[0].toUpperCase()+t.slice(1)+'/'+m.slice(0,4);};
 
   document.getElementById('site-kpis').innerHTML=`
     <div class="kpi"><span class="kpi-label">Vendas Brutas</span><span class="kpi-value">${brl(gross)}</span><span class="kpi-sub">antes de deduções</span></div>
     <div class="kpi"><span class="kpi-label">Vendas Líquidas</span><span class="kpi-value" style="color:var(--pos)">${brl(net)}</span><span class="kpi-sub">após descontos e estornos</span></div>
-    <div class="kpi"><span class="kpi-label">Descontos</span><span class="kpi-value" style="color:var(--neg)">${brl(disc)}</span><span class="kpi-sub">${txDesc} das vendas brutas</span></div>
-    <div class="kpi"><span class="kpi-label">Estornos / Devoluções</span><span class="kpi-value" style="color:var(--neg)">${brl(rev)}</span><span class="kpi-sub">reembolsos processados</span></div>
-    <div class="kpi"><span class="kpi-label">Pedidos pelo Site</span><span class="kpi-value">${peds.toLocaleString('pt-BR')}</span><span class="kpi-sub">ticket médio ${brl2(peds?gross/peds:0)}</span></div>`;
+    ${semColDed
+      ? `<div class="kpi"><span class="kpi-label">Descontos e devoluções</span><span class="kpi-value" style="color:var(--neg)">${brl(ded)}</span><span class="kpi-sub">${gross?((ded/gross)*100).toFixed(1).replace('.',','):'0'}% da venda bruta · bruta − líquida</span></div>`
+      : `<div class="kpi"><span class="kpi-label">Descontos</span><span class="kpi-value" style="color:var(--neg)">${brl(disc)}</span><span class="kpi-sub">${txDesc} das vendas brutas</span></div>
+    <div class="kpi"><span class="kpi-label">Estornos / Devoluções</span><span class="kpi-value" style="color:var(--neg)">${brl(rev)}</span><span class="kpi-sub">reembolsos processados</span></div>`}
+    <div class="kpi"><span class="kpi-label">Pedidos pagos</span><span class="kpi-value">${peds.toLocaleString('pt-BR')}</span><span class="kpi-sub">ticket médio ${brl2(peds?net/peds:0)} (líquido)</span></div>
+    ${melhor?`<div class="kpi" style="border-left:3px solid var(--pos)"><span class="kpi-label">🏆 Melhor mês</span><span class="kpi-value" style="font-size:18px">${nomeM(melhor)}</span><span class="kpi-sub">${brl(porMes[melhor])} líquido${ant&&porMes[ant]?` · ${porMes[melhor]>=porMes[ant]?'+':''}${((porMes[melhor]/porMes[ant]-1)*100).toFixed(0)}% vs mês anterior`:''}</span></div>`:''}`;
 
   // debug: mostra quando dados estão vazios ou colunas não encontradas
   const debugEl=document.getElementById('site-debug');
@@ -1300,7 +1316,7 @@ function renderSite(){
   document.getElementById('site-tabela').innerHTML=`<table>
     <thead><tr><th>Mês</th><th class="r">Vendas Brutas</th><th class="r">Descontos</th><th class="r">Estornos</th><th class="r">Vendas Líquidas</th><th class="r">Pedidos</th></tr></thead>
     <tbody>${meses.map(m=>{
-      const rows=D.shopify.filter(r=>r.data?.startsWith(m));
+      const rows=pagos.filter(r=>r.data?.startsWith(m));
       const g=rows.reduce((x,r)=>x+(parseFloat(r[grossKey])||0),0);
       const d=rows.reduce((x,r)=>x+(parseFloat(r[discKey])||0),0);
       const rv=rows.reduce((x,r)=>x+(parseFloat(r[revKey])||0),0);
@@ -1521,7 +1537,7 @@ function esLerContas(rows){
     const valor=parseFloat(normNum(r['saida']))||parseFloat(normNum(r['valor']))||0;
     const [tipo,cat]=esCategoria(desc, entrada>0);
     const loja=esLojaDe(desc);
-    if(tipo==='aporte'){ aportes.push({data:ehData?pag:venc, origem:desc.replace(/ENTRADA|INVESTIMENTO/gi,'').trim()||'—', tipo:'dinheiro', descricao:desc, valor:entrada||valor}); return; }
+    if(tipo==='aporte'){ const mo=/m[aã]o de obra/i.test(desc); aportes.push({data:ehData?pag:venc, origem:desc.replace(/ENTRADA|INVESTIMENTO|-|M[AÃ]O DE OBRA/gi,'').trim()||'—', tipo:mo?'para mão de obra':'dinheiro', descricao:desc, valor:entrada||valor}); return; }
     if(tipo==='entrada'){ lanc.push({data:ehData?pag:venc, tipo:'entrada', categoria:cat, loja, descricao:desc, valor:entrada}); return; }
     // saídas
     if(/expirad/i.test(pagRaw)) return;                                   // Pix gerado e não pago
@@ -1529,6 +1545,15 @@ function esLerContas(rows){
     const copiada = ehData && venc && (new Date(venc)-new Date(pag))/864e5 >= 20; // data de pgto copiada do mês anterior
     if(ehData && !copiada) lanc.push({data:pag, venc:venc||pag, tipo:'saida', categoria:cat, loja, descricao:desc, valor});
     else aPagar.push({data:venc, categoria:cat, loja, descricao:desc, valor, obs: copiada?'data de pagamento parece copiada do mês anterior':''});
+  });
+  const pagMO = lanc.filter(l=>l.tipo==='saida' && /m[aã]o de obra/i.test(l.categoria)).sort((a,b)=>a.data.localeCompare(b.data));
+  const pagMOfut = aPagar.filter(l=>/m[aã]o de obra/i.test(l.categoria));
+  let nParc=0;
+  [...pagMO, ...pagMOfut].forEach(pm=>{
+    nParc++;
+    const ini=esAddDias(pm.data,-7); let falta=pm.valor;
+    aportes.filter(a=>a.tipo!=='para mão de obra (vinculado)' && a.data>=ini && a.data<=pm.data).sort((a,b)=>a.data.localeCompare(b.data)).forEach(a=>{
+      if(falta>0.5){ a.tipo='para mão de obra'; a.parcela=`${nParc}ª parcela (${pm.data.split('-').reverse().join('/')})`; falta-=a.valor; } });
   });
   return {lanc, aportes, aPagar, porFora, saldoIni};
 }
@@ -1866,7 +1891,7 @@ function renderES(){
   document.getElementById('es-aportes').innerHTML = !ES.aportesOk
     ? '<p class="cx-nota">Crie na planilha a aba <b>aportes</b> com as colunas data, origem, tipo, valor, descricao. Ela aparece aqui automaticamente.</p>'
     : `<table><thead><tr><th>Data</th><th>Origem</th><th>Tipo</th><th>Descrição</th><th class="r">Valor</th></tr></thead>
-      <tbody>${A.map(r=>`<tr><td>${r.data?r.data.split('-').reverse().join('/'):''}</td><td>${r.origem||''}</td><td>${r.tipo||''}</td><td>${r.descricao||''}</td><td class="r">${brl2(r.valor)}</td></tr>`).join('')}</tbody>
+      <tbody>${A.map(r=>`<tr><td>${r.data?r.data.split('-').reverse().join('/'):''}</td><td>${r.origem||''}</td><td>${r.tipo==='para mão de obra'?`<span class="kpi-tag warn">para mão de obra</span>${r.parcela?`<br><small style="color:var(--text3)">${r.parcela}</small>`:''}`:(r.tipo||'')}</td><td>${r.descricao||''}</td><td class="r">${brl2(r.valor)}</td></tr>`).join('')}</tbody>
       <tfoot>${Object.entries(porTipo).map(([t,v])=>`<tr><td colspan="4">Total ${t}</td><td class="r">${brl2(v)}</td></tr>`).join('')}</tfoot></table>`;
 
   document.getElementById('es-nota').innerHTML = temContas
@@ -1904,8 +1929,8 @@ function renderInv(){
   // conferência com o Fluxo de caixa: aportes em dinheiro de setembro (aba contas)
   let conf='';
   if(ES.aportes && ES.aportes.length){
-    const meses=[...new Set(ES.aportes.map(a=>(a.data||'').slice(0,7)))];
-    const dif=meses.map(m=>{ const c=ES.aportes.filter(a=>(a.data||'').startsWith(m)).reduce((x,a)=>x+(parseFloat(a.valor)||0),0);
+    const meses=[...new Set(ES.aportes.filter(a=>!/m[aã]o de obra/i.test(a.tipo||'')).map(a=>(a.data||'').slice(0,7)))];
+    const dif=meses.map(m=>{ const c=ES.aportes.filter(a=>(a.data||'').startsWith(m) && !/m[aã]o de obra/i.test(a.tipo||'')).reduce((x,a)=>x+(parseFloat(a.valor)||0),0);
       const i=todos.filter(r=>(r.data||'').startsWith(m) && /dinheiro|aporte|pix/.test(esSemAcento(r.tipo))).reduce((x,r)=>x+r.valor,0);
       return {m,c,i}; }).filter(x=>Math.abs(x.c-x.i)>1);
     if(dif.length) conf = 'Diferença entre esta aba e os aportes do Fluxo de caixa (aba contas): ' + dif.map(x=>`${x.m.split('-').reverse().join('/')}: contas ${brl(x.c)} × investimentos ${brl(x.i)}`).join(' · ');
@@ -1916,29 +1941,10 @@ function renderInv(){
     `<div class="kpi"><span class="kpi-label">${invState.tipo==='todos'?'Eventos registrados':'Total · '+invState.tipo}</span><span class="kpi-value">${invState.tipo==='todos'?R.length:brl2(soma(R))}</span><span class="kpi-sub">${invState.tipo==='todos'?'tipos diferentes não são somados':R.length+' eventos'} · ${R[0]?.data?R[0].data.split('-').reverse().join('/'):''} a ${R.at(-1)?.data?R.at(-1).data.split('-').reverse().join('/'):''}</span></div>` +
     porTipo.map(x=>`<div class="kpi"><span class="kpi-label"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${INV_COR(x.t)};margin-right:6px"></span>${x.t}</span><span class="kpi-value">${brl2(x.v)}</span><span class="kpi-sub">${x.n} evento${x.n>1?'s':''}</span></div>`).join('');
 
-  // acumulado por tipo (linhas em degrau)
-  const sC=setupCanvas('inv-chart',260);
-  if(sC){
-    const {ctx,W,H}=sC, pad={top:20,right:16,bottom:30,left:84}, cW=W-pad.left-pad.right, cH=H-pad.top-pad.bottom;
-    ctx.clearRect(0,0,W,H);
-    const RS=R.filter(r=>!invNaoSoma(r));
-    const datas=[...new Set(RS.map(r=>r.data).filter(Boolean))].sort();
-    if(datas.length){
-      const t0=new Date(datas[0]+'T12:00:00').getTime(), t1=Math.max(new Date(datas.at(-1)+'T12:00:00').getTime(), t0+864e5*7);
-      const X=d=>pad.left+(new Date(d+'T12:00:00').getTime()-t0)/(t1-t0)*cW;
-      const series=porTipo.map(x=>{let a=0; return {t:x.t, pts:datas.map(d=>{a+=soma(RS.filter(r=>r.tipo===x.t&&r.data===d)); return [d,a];})};});
-      const max=Math.max(1,...series.map(s=>s.pts.at(-1)[1]))*1.1, Y=v=>pad.top+cH-v/max*cH;
-      const step=[1e4,2e4,5e4,1e5,2e5,5e5,1e6].find(t=>max/t<=5)||2e6;
-      ctx.font='10px Inter,sans-serif';ctx.textAlign='right';
-      for(let v=0;v<=max;v+=step){const y=Y(v);ctx.beginPath();ctx.strokeStyle=tok('--border');ctx.setLineDash([3,3]);ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=tok('--text3');ctx.fillText(brl(v).replace('R$ ','R$\xa0'),pad.left-6,y+3);}
-      series.forEach(se=>{ ctx.strokeStyle=INV_COR(se.t);ctx.lineWidth=2.5;ctx.beginPath(); let prev=0;
-        se.pts.forEach(([d,v],i)=>{const x=X(d); if(i===0){ctx.moveTo(x,Y(0));} ctx.lineTo(x,Y(prev)); ctx.lineTo(x,Y(v)); prev=v;}); ctx.lineTo(pad.left+cW,Y(prev)); ctx.stroke();
-        ctx.fillStyle=INV_COR(se.t);ctx.font='bold 10px Inter,sans-serif';ctx.textAlign='right';ctx.fillText(brl(prev),pad.left+cW,Y(prev)-6); });
-      ctx.fillStyle=tok('--text3');ctx.font='10px Inter,sans-serif';ctx.textAlign='center';
-      const n=Math.min(6,datas.length); for(let k=0;k<n;k++){const d=datas[Math.round(k*(datas.length-1)/Math.max(1,n-1))]; ctx.fillText(d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(2,4),X(d),H-10);}
-    }
-    document.getElementById('inv-leg').innerHTML=porTipo.map(x=>`<span><i style="background:${INV_COR(x.t)}"></i>${x.t}</span>`).join('');
-  }
+  // barras por tipo (substitui o gráfico em degrau)
+  const itens=[...porTipo].sort((x,y)=>y.v-x.v);
+  hBars('inv-bars', itens.map(x=>({label:x.t, value:x.v, fmt:brl(x.v)})), lbl=>INV_COR(lbl));
+  document.querySelectorAll('#inv-bars .hbar-label').forEach((el,i)=>{ const x=itens[i]; if(x) el.title=`${x.t}: ${x.n} evento(s)`; });
 
   let acc=0;
   document.getElementById('inv-tabela').innerHTML = `<table>
