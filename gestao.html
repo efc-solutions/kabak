@@ -249,7 +249,15 @@ td.vazio{color:var(--text3);font-style:italic;font-family:'Inter',sans-serif!imp
 .pilha{display:flex;flex-direction:column;gap:22px}
 .pilha>.pend+.pend{margin-top:0}
 #can-resultado-pend{margin-top:14px}
-.kpi-sub code{word-break:break-all}
+.kpi-sub code{overflow-wrap:anywhere;white-space:normal}
+/* nada pode empurrar a página para a direita */
+html,body{overflow-x:hidden}
+.two-col>*,.tab-panel>*,.pilha>*,.kpi-grid>*{min-width:0}
+.section{min-width:0;max-width:100%}
+.table-wrap{max-width:100%}
+#tab-aportes .two-col{grid-template-columns:3fr 2fr}
+#ap-bars .hbar-row{grid-template-columns:minmax(90px,150px) 1fr 96px}
+@media(max-width:900px){#tab-aportes .two-col{grid-template-columns:1fr}}
 
 </style>
 </head>
@@ -278,7 +286,7 @@ td.vazio{color:var(--text3);font-style:italic;font-family:'Inter',sans-serif!imp
     <p class="ph-sub">Capital, tecido, mão de obra e estoque: o que cada lado colocou, o que já foi usado e o saldo entre os sócios</p></div></div>
   <div class="kpi-grid" id="ap-kpis"><div class="loading"><span class="spinner"></span></div></div>
   <div class="two-col">
-    <div class="section"><div class="section-hd"><div><div class="section-title">Aportado por origem e tipo</div><div class="section-sub">Soma dos eventos que entram em total · fonte: aba investimentos</div></div></div><div class="table-wrap" id="ap-origem"></div></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Aportado por tipo e origem</div><div class="section-sub">Soma dos eventos que entram em total · fonte: aba investimentos</div></div></div><div class="table-wrap" id="ap-origem"></div></div>
     <div class="section"><div class="section-hd"><div><div class="section-title">Aportado por tipo</div></div></div><div class="hbar-wrap" id="ap-bars"></div></div>
   </div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Aportado × utilizado</div><div class="section-sub">Quanto de cada aporte já virou produto vendido ou foi consumido</div></div></div><div id="ap-uso"></div></div>
@@ -316,6 +324,7 @@ td.vazio{color:var(--text3);font-style:italic;font-family:'Inter',sans-serif!imp
     <div class="section"><div class="section-hd"><div><div class="section-title">Projeção dos próximos meses</div><div class="section-sub">Ritmo dos últimos 30 dias × dias de cada mês</div></div></div><div class="table-wrap" id="can-proj"></div><p class="nota">Projeção simples, sem sazonalidade: o histórico começa em junho e ainda não cobre um ano.</p></div>
   </div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Real × planejado</div><div class="section-sub">Meta de venda por canal e mês</div></div></div><div id="can-meta"></div></div>
+  <div class="section"><div class="section-hd"><div><div class="section-title">Formas de pagamento nas lojas</div><div class="section-sub" id="can-formas-sub"></div></div></div><div class="table-wrap" id="can-formas"></div><div id="can-formas-obs"></div></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Faturamento, despesas e resultado por loja</div><div class="section-sub" id="can-res-sub"></div></div></div><div class="table-wrap" id="can-resultado"></div><div id="can-resultado-pend"></div></div>
 </div>
 
@@ -893,6 +902,7 @@ const ABAS_DEF = [
   ['entregas', 'entregas',        ['pedido','tipo','data_aprovado'], 'pedido · tipo (venda, troca, devolucao) · data_aprovado · data_envio · data_entrega · frete_cobrado · frete_pago', 'Entrega inteira'],
   ['marketing','marketing',       ['mes','meta_ads'],                'mes · meta_ads · google_ads · agencia · faturamento_atribuido · observacao',        'Marketing inteiro'],
   ['metas',    'metas',           ['mes','canal','meta'],            'mes · canal · meta',                                                                'Canais: real × planejado'],
+  ['caixa',    'caixa-lojas',     ['data','loja','forma','valor'],   'data · loja · forma · parcelas · valor · caixa_fechado · observacao',               'Canais: formas de pagamento das lojas'],
 ];
 
 /* ══════════════════════════════════════════
@@ -940,8 +950,11 @@ function renderAportes(){
     const porOrigem = origens.map(o=>({o, v:soma(validos.filter(r=>(r.origem||'—')===o), r=>r.valor), n:validos.filter(r=>(r.origem||'—')===o).length})).sort((a,b)=>b.v-a.v);
     kp.innerHTML = porOrigem.map(x=>`<div class="kpi"><span class="kpi-label">Aportado · ${x.o}</span><span class="kpi-value">${brl(x.v)}</span><span class="kpi-sub">${x.n} evento${x.n>1?'s':''} que entram em soma</span></div>`).join('')
       + `<div class="kpi"><span class="kpi-label">Eventos registrados</span><span class="kpi-value">${R.length}</span><span class="kpi-sub">de ${dBR(R[0].data)} a ${dBR(R[R.length-1].data)}</span></div>`;
-    document.getElementById('ap-origem').innerHTML = `<table><thead><tr><th>Origem</th>${tipos.map(t=>`<th class="r">${t}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>${
-      porOrigem.map(x=>`<tr><td><b>${x.o}</b></td>${tipos.map(t=>{const v=soma(validos.filter(r=>(r.origem||'—')===x.o&&r.tipo===t),r=>r.valor); return `<td class="r">${v?brl(v):'—'}</td>`;}).join('')}<td class="r"><b>${brl(x.v)}</b></td></tr>`).join('')}</tbody></table>`;
+    const tiposOrd = tipos.map(t=>({t, v:soma(validos.filter(r=>r.tipo===t),r=>r.valor)})).sort((x,y)=>y.v-x.v);
+    const totG = soma(validos,r=>r.valor);
+    document.getElementById('ap-origem').innerHTML = `<table><thead><tr><th>Tipo</th>${porOrigem.map(x=>`<th class="r">${x.o}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>${
+      tiposOrd.map(x=>`<tr><td><span class="sw" style="background:${INV_COR(x.t)}"></span>${x.t}</td>${porOrigem.map(o=>{const v=soma(validos.filter(r=>(r.origem||'—')===o.o&&r.tipo===x.t),r=>r.valor); return `<td class="r">${v?brl(v):'—'}</td>`;}).join('')}<td class="r"><b>${brl(x.v)}</b></td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Total</td>${porOrigem.map(o=>`<td class="r">${brl(o.v)}</td>`).join('')}<td class="r"></td></tr></tfoot></table>`;
     const pt = tipos.map(t=>({label:t, value:soma(validos.filter(r=>r.tipo===t),r=>r.valor)})).filter(x=>x.value).sort((a,b)=>b.value-a.value);
     hBars('ap-bars', pt.map(x=>({...x, fmt:brl(x.value)})), l=>INV_COR(l));
     document.getElementById('ap-tabela').innerHTML = `<table><thead><tr><th>Data</th><th>Origem</th><th>Tipo</th><th>Descrição</th><th>Status</th><th class="r">Valor</th></tr></thead><tbody>${
@@ -1090,6 +1103,20 @@ function renderCanais(){
         return `<tr><td>${mesLbl(r.mes)}${r.mes===mesAtual?' *':''}</td><td>${r.canal}</td><td class="r">${brl(r.meta)}</td><td class="r">${brl(real)}</td><td class="r ${real>=r.meta?'es-pos':'es-neg'}">${brl(real-r.meta)}</td><td class="r">${pct(real,r.meta)}</td></tr>`; }).join('')}</tbody></table></div>`;
   } else document.getElementById('can-meta').innerHTML = pend({t:'Meta de venda por canal e mês', d:'Comparação entre o que foi vendido e o que estava planejado. Hoje não há meta registrada: a referência só passa a existir quando os sócios definirem a meta de cada canal.',
       dado:'Meta em R$ por mês e por canal (ou uma linha "Total" por mês)', quem:'Sócios (Samson e Jean), a definir em reunião', onde:'aba <b>metas</b>: mes · canal · meta'});
+  // formas de pagamento (fechamento de caixa das lojas)
+  const CX = T.caixa;
+  if(CX){
+    const R = CX.map(r=>({data:normData(r.data), loja:(r.loja||'').trim(), forma:(/cr[eé]dito/i.test(r.forma)&&(parseInt(r.parcelas)||1)>1)?'Crédito parcelado':(/cr[eé]dito/i.test(r.forma)?'Crédito à vista':(r.forma||'').trim()), valor:num(r.valor), obs:(r.observacao||'').trim()})).filter(r=>r.valor && /^\d{4}-/.test(r.data) && (sel==='todos'||r.data.startsWith(sel)));
+    const lj=[...new Set(R.map(r=>r.loja))], tot=soma(R,r=>r.valor), dts=[...new Set(R.map(r=>r.data))].sort();
+    const fm=[...new Set(R.map(r=>r.forma))].map(f=>({f, v:soma(R.filter(r=>r.forma===f),r=>r.valor)})).sort((x,y)=>y.v-x.v);
+    document.getElementById('can-formas-sub').textContent = dts.length ? `Valor registrado no fechamento de caixa · ${dts.length} dias, de ${dBR(dts[0])} a ${dBR(dts[dts.length-1])} · fonte: aba caixa-lojas` : 'Sem fechamento de caixa no período';
+    document.getElementById('can-formas').innerHTML = R.length ? `<table><thead><tr><th>Forma</th>${lj.map(l=>`<th class="r">${l}</th>`).join('')}<th class="r">Total</th><th class="r">% do total</th></tr></thead><tbody>${
+      fm.map(x=>`<tr><td>${x.f}</td>${lj.map(l=>{const v=soma(R.filter(r=>r.forma===x.f&&r.loja===l),r=>r.valor); return `<td class="r">${v?brl(v):'—'}</td>`;}).join('')}<td class="r"><b>${brl(x.v)}</b></td><td class="r">${pct(x.v,tot)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Total</td>${lj.map(l=>`<td class="r">${brl(soma(R.filter(r=>r.loja===l),r=>r.valor))}</td>`).join('')}<td class="r">${brl(tot)}</td><td class="r"></td></tr></tfoot></table>` : '';
+    const ob=R.filter(r=>r.obs);
+    document.getElementById('can-formas-obs').innerHTML = ob.length ? `<p class="nota"><b>${ob.length} fechamento(s) com observação:</b></p><div class="table-wrap es-scroll" style="max-height:220px"><table><tbody>${ob.sort((x,y)=>y.data.localeCompare(x.data)).map(r=>`<tr><td style="white-space:nowrap">${dBR(r.data)}</td><td>${r.loja}</td><td>${r.forma}</td><td class="r">${brl2(r.valor)}</td><td style="color:var(--text2);font-size:12px">${r.obs}</td></tr>`).join('')}</tbody></table></div>` : '';
+  } else { document.getElementById('can-formas-sub').textContent=''; document.getElementById('can-formas-obs').innerHTML='';
+    document.getElementById('can-formas').innerHTML = pend({t:'Formas de pagamento das lojas', d:'Quanto as lojas recebem em Pix, dinheiro, débito, crédito e crediário, pelo fechamento de caixa de cada dia.', dado:'Fechamento de caixa por dia, loja e forma de pagamento', quem:'Relatório de caixa do Bling (PDF diário)', onde:'aba <b>caixa-lojas</b>: data · loja · forma · parcelas · valor · caixa_fechado · observacao'}); }
   // resultado por loja
   const mRef = sel!=='todos' ? sel : (fech.length ? fech[fech.length-1].m : mesAtual);
   document.getElementById('can-res-sub').textContent = `${mesLbl(mRef)} · custo fixo mensal da aba custos-fixos`;
