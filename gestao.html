@@ -258,6 +258,8 @@ html,body{overflow-x:hidden}
 #tab-aportes .two-col{grid-template-columns:3fr 2fr}
 #ap-bars .hbar-row{grid-template-columns:minmax(90px,150px) 1fr 96px}
 @media(max-width:900px){#tab-aportes .two-col{grid-template-columns:1fr}}
+#fin-ext-sai .hbar-row,#fin-ext-ent .hbar-row{grid-template-columns:minmax(120px,210px) 1fr 150px}
+@media(max-width:640px){#fin-ext-sai .hbar-row,#fin-ext-ent .hbar-row{grid-template-columns:110px 1fr 110px}}
 
 </style>
 </head>
@@ -357,7 +359,12 @@ html,body{overflow-x:hidden}
   <div class="ph"><div class="ph-left"><span class="eyebrow">Caixa</span><h1 class="ph-title">Financeiro</h1>
     <p class="ph-sub">Entradas, despesas, salários e resultado · fonte: controle de contas (aba contas)</p></div></div>
   <div class="kpi-grid" id="fin-kpis"></div>
-  <div class="section"><div class="section-hd"><div><div class="section-title">Fluxo de caixa por mês</div><div class="section-sub">Entradas da operação, aportes e saídas pagas</div></div></div><div class="table-wrap" id="fin-fluxo"></div></div>
+  <div class="section"><div class="section-hd"><div><div class="section-title">Fluxo de caixa pelo extrato bancário</div><div class="section-sub" id="fin-ext-sub"></div></div></div><div id="fin-ext"></div></div>
+  <div class="two-col" id="fin-ext-cats" style="display:none">
+    <div class="section"><div class="section-hd"><div><div class="section-title">Para onde foi o dinheiro</div><div class="section-sub">Saídas do extrato por categoria, no período todo</div></div></div><div class="hbar-wrap" id="fin-ext-sai"></div></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">De onde veio o dinheiro</div><div class="section-sub">Entradas do extrato por categoria, no período todo</div></div></div><div class="hbar-wrap" id="fin-ext-ent"></div></div>
+  </div>
+  <div class="section"><div class="section-hd"><div><div class="section-title">Fluxo de caixa pelo controle de contas</div><div class="section-sub">Entradas da operação, aportes e saídas pagas</div></div></div><div class="table-wrap" id="fin-fluxo"></div></div>
   <div class="two-col">
     <div class="section"><div class="section-hd"><div><div class="section-title">Despesas por categoria</div><div class="section-sub" id="fin-cat-sub"></div></div></div><div class="hbar-wrap" id="fin-cat"></div></div>
     <div class="section"><div class="section-hd"><div><div class="section-title">Contas a pagar</div><div class="section-sub">Lançadas e ainda sem data de pagamento</div></div></div><div class="table-wrap es-scroll" id="fin-apagar"></div></div>
@@ -902,6 +909,7 @@ const ABAS_DEF = [
   ['entregas', 'entregas',        ['pedido','tipo','data_aprovado'], 'pedido · tipo (venda, troca, devolucao) · data_aprovado · data_envio · data_entrega · frete_cobrado · frete_pago', 'Entrega inteira'],
   ['marketing','marketing',       ['mes','meta_ads'],                'mes · meta_ads · google_ads · agencia · faturamento_atribuido · observacao',        'Marketing inteiro'],
   ['metas',    'metas',           ['mes','canal','meta'],            'mes · canal · meta',                                                                'Canais: real × planejado'],
+  ['extrato',  'extrato-mensal',  ['mes','tipo','categoria','valor'], 'mes · tipo (entrada, saida, saldo) · categoria · valor · lancamentos',            'Financeiro: fluxo de caixa pelo extrato bancário'],
   ['caixa',    'caixa-lojas',     ['data','loja','forma','valor'],   'data · loja · forma · parcelas · valor · caixa_fechado · observacao',               'Canais: formas de pagamento das lojas'],
 ];
 
@@ -1235,6 +1243,27 @@ function renderMarketing(){
 ══════════════════════════════════════════ */
 function renderFinanceiro(){
   const L = FIN.lanc, VM = vendasMesCanal();
+  // extrato bancário resumido (aba extrato-mensal)
+  const EX = T.extrato, elx = document.getElementById('fin-ext');
+  if(EX){
+    const X = EX.map(r=>({mes:normMes(r.mes), tipo:esSemAcento(r.tipo), cat:(r.categoria||'').trim(), v:num(r.valor)})).filter(r=>r.mes);
+    const ms = [...new Set(X.filter(r=>r.tipo!=='saldo').map(r=>r.mes))].sort();
+    const ehAp = c => /aporte|cheque/i.test(c);
+    const g = (m,f) => soma(X.filter(r=>r.mes===m && f(r)), r=>r.v);
+    const lin = ms.map(m=>({m, op:g(m,r=>r.tipo==='entrada'&&!ehAp(r.cat)), ap:g(m,r=>r.tipo==='entrada'&&ehAp(r.cat)), sa:g(m,r=>r.tipo==='saida'), sd:(X.find(r=>r.tipo==='saldo'&&r.mes===m)||{}).v}));
+    const T_ = k => soma(lin, x=>x[k]);
+    document.getElementById('fin-ext-sub').textContent = `Extrato do Itaú resumido por mês, de ${mesLbl(ms[0])} a ${mesLbl(ms[ms.length-1])} · fonte: aba extrato-mensal`;
+    elx.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Aportes</th><th class="r">Saídas</th><th class="r">Resultado da operação</th><th class="r">Saldo no fim do mês</th></tr></thead><tbody>${
+      lin.map(x=>`<tr><td>${mesLbl(x.m)}</td><td class="r">${brl(x.op)}</td><td class="r">${x.ap?brl(x.ap):'—'}</td><td class="r">${brl(x.sa)}</td><td class="r ${x.op-x.sa>=0?'es-pos':'es-neg'}">${brl(x.op-x.sa)}</td><td class="r">${x.sd!=null?brl(x.sd):'—'}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Total</td><td class="r">${brl(T_('op'))}</td><td class="r">${brl(T_('ap'))}</td><td class="r">${brl(T_('sa'))}</td><td class="r">${brl(T_('op')-T_('sa'))}</td><td class="r"></td></tr></tfoot></table></div>
+      <p class="nota">Resultado da operação = entradas da operação − saídas, sem contar os aportes. No período, a operação consumiu ${brl(Math.max(0,T_('sa')-T_('op')))} a mais do que gerou, coberto por ${brl(T_('ap'))} de aportes. Depósitos em cheque ainda bloqueados contam como aporte no mês em que entraram.</p>`;
+    const porCat = t => { const o={}; X.filter(r=>r.tipo===t).forEach(r=>o[r.cat]=(o[r.cat]||0)+r.v); const tt=soma(Object.values(o),v=>v); return Object.entries(o).map(([label,value])=>({label,value,fmt:brl(value)+' · '+pct(value,tt)})).sort((a,b)=>b.value-a.value); };
+    document.getElementById('fin-ext-cats').style.display='';
+    hBars('fin-ext-sai', porCat('saida')); hBars('fin-ext-ent', porCat('entrada'), l=>/aporte|cheque/i.test(l)?'#3b6ea5':'#2d7a4f');
+  } else {
+    document.getElementById('fin-ext-sub').textContent=''; document.getElementById('fin-ext-cats').style.display='none';
+    elx.innerHTML = pend({t:'Fluxo de caixa pelo extrato', d:'Entradas, saídas e saldo de cada mês, tirados do extrato bancário e resumidos por categoria, sem dados de clientes.', dado:'Extrato da conta, mês a mês', quem:'Samson (acesso à conta)', onde:'aba <b>extrato-mensal</b>: mes · tipo · categoria · valor · lancamentos'});
+  }
   if(!FIN.ok){
     document.getElementById('fin-kpis').innerHTML = kInd('saldo_bancario');
     document.getElementById('fin-fluxo').innerHTML = pend({t:'Controle de contas', d:'A aba contas não carregou ou está vazia.', dado:'Entradas e saídas lançadas, com vencimento e data de pagamento', quem:'Kris', onde:'aba <b>contas</b> (formato da planilha CONTROLE CONTAS KABAK)'});
