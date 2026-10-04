@@ -299,7 +299,7 @@ table.cen td.r{white-space:nowrap}
   </div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Aportado × utilizado</div><div class="section-sub">Quanto de cada aporte já virou produto vendido ou foi consumido</div></div></div><div id="ap-uso"></div></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Saldo entre os sócios</div><div class="section-sub">Quanto cada lado deve ao outro, pelo critério combinado</div></div></div><div class="kpi-grid" id="ap-saldo"></div></div>
-  <div class="section"><div class="section-hd"><div><div class="section-title">Linha do tempo dos aportes</div><div class="section-sub">Valores em cinza não entram em soma (estão dentro de outro total, são lacuna ou registro)</div></div></div><div class="table-wrap es-scroll" id="ap-tabela"></div></div>
+  <div class="section"><div class="section-hd"><div><div class="section-title">Linha do tempo dos aportes</div><div class="section-sub">Valores em cinza não entram em soma (estão dentro de outro total, são lacuna ou registro). Pagamentos da Kabak a um sócio aparecem na lista, mas não contam como aporte</div></div></div><div class="table-wrap es-scroll" id="ap-tabela"></div></div>
 </div>
 
 <!-- PRODUÇÃO -->
@@ -955,7 +955,10 @@ const ehLojaFis = c => !/site|shopee|marketplace|mercado/i.test(c);
    APORTES
 ══════════════════════════════════════════ */
 function renderAportes(){
-  const R = invRows(); const validos = R.filter(r=>!invNaoSoma(r));
+  const R = invRows();
+  const ehPgto = r => /pagamento/i.test(r.tipo) || /→|->/.test(r.origem||'');   // pagamento da Kabak a um sócio não é aporte
+  const pg = R.filter(ehPgto), pgPago = pg.filter(r=>/^pago/i.test(r.status)), pgAberto = pg.filter(r=>/pagar|aberto|previst/i.test(r.status));
+  const validos = R.filter(r=>!invNaoSoma(r) && !ehPgto(r));
   const kp = document.getElementById('ap-kpis');
   if(!R.length){
     kp.innerHTML = ''; document.getElementById('ap-origem').innerHTML = pend({t:'Aportes por origem', d:'A aba investimentos não carregou ou está vazia.', dado:'data · origem · tipo · descrição · valor · status', quem:'Du (base: cronologia da sociedade)', onde:'aba <b>investimentos</b>'});
@@ -965,6 +968,7 @@ function renderAportes(){
     const tipos = [...new Set(validos.map(r=>r.tipo))];
     const porOrigem = origens.map(o=>({o, v:soma(validos.filter(r=>(r.origem||'—')===o), r=>r.valor), n:validos.filter(r=>(r.origem||'—')===o).length})).sort((a,b)=>b.v-a.v);
     kp.innerHTML = porOrigem.map(x=>`<div class="kpi"><span class="kpi-label">Aportado · ${x.o}</span><span class="kpi-value">${brl(x.v)}</span><span class="kpi-sub">${x.n} evento${x.n>1?'s':''} que entram em soma</span></div>`).join('')
+      + (pg.length ? `<div class="kpi"><span class="kpi-label">Já pago da mão de obra</span><span class="kpi-value">${brl(soma(pgPago,r=>r.valor))}</span><span class="kpi-sub">pago pela Kabak ao Jean${pgAberto.length?' · '+brl(soma(pgAberto,r=>r.valor))+' a pagar':''} · não é aporte</span></div>` : '')
       + `<div class="kpi"><span class="kpi-label">Eventos registrados</span><span class="kpi-value">${R.length}</span><span class="kpi-sub">de ${dBR(R[0].data)} a ${dBR(R[R.length-1].data)}</span></div>`;
     const tiposOrd = tipos.map(t=>({t, v:soma(validos.filter(r=>r.tipo===t),r=>r.valor)})).sort((x,y)=>y.v-x.v);
     const totG = soma(validos,r=>r.valor);
