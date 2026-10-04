@@ -260,6 +260,12 @@ html,body{overflow-x:hidden}
 @media(max-width:900px){#tab-aportes .two-col{grid-template-columns:1fr}}
 #fin-ext-sai .hbar-row,#fin-ext-ent .hbar-row{grid-template-columns:minmax(120px,210px) 1fr 150px}
 @media(max-width:640px){#fin-ext-sai .hbar-row,#fin-ext-ent .hbar-row{grid-template-columns:110px 1fr 110px}}
+.lista{margin:0 0 0 18px;display:flex;flex-direction:column;gap:9px;font-size:13px;color:var(--text);line-height:1.5}
+#tab-estrategia td small{white-space:normal;max-width:240px}
+table.cen th{white-space:normal;vertical-align:bottom;line-height:1.3}
+table.cen td:first-child{min-width:210px}
+table.cen td.r{white-space:nowrap}
+#tab-estrategia td small{max-width:none}
 
 </style>
 </head>
@@ -376,7 +382,7 @@ html,body{overflow-x:hidden}
 <!-- ESTRATÉGIA -->
 <div class="tab-panel" id="tab-estrategia">
   <div class="ph"><div class="ph-left"><span class="eyebrow">Próximo passo</span><h1 class="ph-title">Estratégia de vendas</h1>
-    <p class="ph-sub">Estudo comparativo de cenários para vender o estoque, a montar depois da apresentação com os números fechados</p></div></div>
+    <p class="ph-sub">Comparativo preliminar de caminhos para vender o estoque: Brás, loja em São Paulo, atacado e lojas de Minas</p></div></div>
   <div id="estr-corpo" class="pilha"></div>
 </div>
 
@@ -781,6 +787,8 @@ function normData(v){
 function normNum(v){
   if(!v && v!==0) return '0';
   const s = String(v).trim();
+  // MILHAR: planilha em pt-BR exporta 1.016 ou 50.000 (ponto = milhar, sem decimais)
+  if(/^-?\d{1,3}(\.\d{3})+$/.test(s)) return s.replace(/\./g,'');
   // já é número puro (inteiro ou decimal com ponto)
   if(/^-?\d+(\.\d+)?$/.test(s)) return s;
   // virou data do Sheets? retorna 0
@@ -1031,7 +1039,7 @@ function renderEstoque(){
   // cobertura: por peças (se houver itens vendidos) ou financeira (estoque a preço de venda ÷ venda diária em R$)
   let cob='', cobSub='';
   const I = itensRows();
-  if(I){ const ini=esAddDias(esHoje(),-90); const q=soma(I.filter(r=>r.data>=ini),r=>r.qtd)/90; cob = q?inteiro(pecas/q)+' dias':'—'; cobSub=`${inteiro(q)} peças vendidas por dia nos últimos 90 dias`; }
+  if(I && new Set(I.map(r=>r.data)).size>=30){ const ini=esAddDias(esHoje(),-90); const q=soma(I.filter(r=>r.data>=ini),r=>r.qtd)/90; cob = q?inteiro(pecas/q)+' dias':'—'; cobSub=`${inteiro(q)} peças vendidas por dia nos últimos 90 dias`; }
   else { const vd=vendaDiaria(90); cob = (vd&&venda)?inteiro(venda/vd)+' dias':'—'; cobSub = venda ? `aproximação financeira: estoque a preço de venda ÷ ${brl(vd)} vendidos por dia (90 dias)` : 'falta o preço de venda dos produtos'; }
   const lojas=[...new Set(E.map(r=>r.loja))];
   const porLoja=lojas.map(l=>{const x=E.filter(r=>r.loja===l); return {l, p:soma(x,r=>r.qtd), c:soma(x,r=>r.qtd*r.custo), v:soma(x,r=>r.qtd*r.preco), n:x.length};}).sort((a,b)=>b.c-a.c);
@@ -1166,13 +1174,13 @@ function renderVendas(){
       + `</div>`;
     return;
   }
-  const ini=esAddDias(esHoje(),-90), R=I.filter(r=>r.data>=ini), P={};
+  const ini=esAddDias(esHoje(),-90), R=I.filter(r=>r.data>=ini), P={}; const nd=Math.max(1,new Set(R.map(r=>r.data)).size);
   R.forEach(r=>{const p=(P[r.produto]=P[r.produto]||{produto:r.produto,qtd:0,valor:0}); p.qtd+=r.qtd; p.valor+=r.valor;});
   const est={}; (E||[]).forEach(r=>{const p=(est[esSemAcento(r.produto)]=est[esSemAcento(r.produto)]||{qtd:0,custo:0}); p.qtd+=r.qtd; p.custo+=r.qtd*r.custo;});
   const L=Object.values(P).map(p=>{const e=est[esSemAcento(p.produto)]; return {...p, est:e?e.qtd:null, cm:e&&e.qtd?e.custo/e.qtd:null};}).sort((a,b)=>b.qtd-a.qtd);
-  const linha = p => `<tr><td>${p.produto}</td><td class="r">${inteiro(p.qtd)}</td><td class="r">${brl(p.valor)}</td><td class="r">${p.qtd?brl2(p.valor/p.qtd):'—'}</td><td class="r">${p.cm!=null?brl2(p.cm):'—'}</td><td class="r">${p.est!=null?inteiro(p.est):'—'}</td><td class="r">${p.est?(p.qtd/p.est*100).toFixed(1).replace('.',',')+'%':'—'}</td><td class="r">${p.est&&p.qtd?inteiro(p.est/(p.qtd/90))+' dias':'—'}</td></tr>`;
+  const linha = p => `<tr><td>${p.produto}</td><td class="r">${inteiro(p.qtd)}</td><td class="r">${brl(p.valor)}</td><td class="r">${p.qtd?brl2(p.valor/p.qtd):'—'}</td><td class="r">${p.cm!=null?brl2(p.cm):'—'}</td><td class="r">${p.est!=null?inteiro(p.est):'—'}</td><td class="r">${p.est?(p.qtd/p.est*100).toFixed(1).replace('.',',')+'%':'—'}</td><td class="r">${p.est&&p.qtd&&nd>=30?inteiro(p.est/(p.qtd/nd))+' dias':'—'}</td></tr>`;
   const cab = `<thead><tr><th>Produto</th><th class="r">Peças (90 d)</th><th class="r">Faturamento</th><th class="r">Preço médio</th><th class="r">Custo médio</th><th class="r">Em estoque</th><th class="r">Giro (90 d)</th><th class="r">Cobertura</th></tr></thead>`;
-  el.innerHTML = `<div class="section"><div class="section-hd"><div><div class="section-title">Top 5 produtos mais vendidos</div><div class="section-sub">Últimos 90 dias, em peças</div></div></div><div class="table-wrap"><table>${cab}<tbody>${L.slice(0,5).map(linha).join('')}</tbody></table></div></div>
+  el.innerHTML = `${nd<30?`<div class="es-aviso">Há só ${nd} dia(s) de venda por produto lançado(s) na aba itens-vendidos. O ranking abaixo é desse(s) dia(s); giro e cobertura só fazem sentido com pelo menos um mês.</div>`:''}<div class="section"><div class="section-hd"><div><div class="section-title">Top 5 produtos mais vendidos</div><div class="section-sub">${nd<30?nd+' dia(s) com dados':'Últimos 90 dias'}, em peças</div></div></div><div class="table-wrap"><table>${cab}<tbody>${L.slice(0,5).map(linha).join('')}</tbody></table></div></div>
     <div class="section"><div class="section-hd"><div><div class="section-title">Giro por produto</div><div class="section-sub">Giro = peças vendidas em 90 dias ÷ peças em estoque · ${L.length} produtos com venda</div></div></div><div class="table-wrap es-scroll"><table>${cab}<tbody>${L.map(linha).join('')}</tbody></table></div>
     ${E?'':'<p class="nota">Sem a aba <b>estoque</b>, o giro e o custo médio ficam em branco.</p>'}</div>`;
 }
@@ -1227,13 +1235,13 @@ function renderMarketing(){
   const semAg=R.filter(r=>!r.ag).length;
   el.innerHTML = `<div class="kpi-grid">
       <div class="kpi"><span class="kpi-label">Investido em mídia</span><span class="kpi-value">${brl(midia)}</span><span class="kpi-sub">Meta ${brl(soma(R,r=>r.meta))} · Google ${brl(soma(R,r=>r.google))}</span></div>
-      <div class="kpi${ag?'':' kpi-pend'}"><span class="kpi-label">Mensalidade da agência</span><span class="kpi-value">${ag?brl(ag):'—'}</span><span class="kpi-sub">${semAg?semAg+' mês(es) sem o valor da mensalidade':'todos os meses preenchidos'}</span></div>
+      <div class="kpi${ag?'':' kpi-pend'}"><span class="kpi-label">Mensalidade da agência</span><span class="kpi-value">${ag?brl(ag):'—'}</span><span class="kpi-sub">pago à agência em ${R.filter(r=>r.ag).length} meses</span></div>
       <div class="kpi"><span class="kpi-label">Retorno sobre a mídia</span><span class="kpi-value">${midia?(site/midia).toFixed(2).replace('.',',')+'×':'—'}</span><span class="kpi-sub">faturamento do site ÷ mídia (todo o site, não só o atribuído)</span></div>
-      <div class="kpi"><span class="kpi-label">Marketing ÷ faturamento do site</span><span class="kpi-value">${site?pct(midia+ag,site):'—'}</span><span class="kpi-sub">mídia + agência, nos meses preenchidos</span></div></div>
+      <div class="kpi"><span class="kpi-label">Marketing ÷ faturamento do site</span><span class="kpi-value">${site?pct(soma(R.filter(r=>r.site),r=>r.midia+r.ag),soma(R,r=>r.site)):'—'}</span><span class="kpi-sub">mídia + agência, nos meses com faturamento do site</span></div></div>
     <div class="section"><div class="section-hd"><div><div class="section-title">Investimento em mídia por mês</div><div class="section-sub">Meta Ads e Google Ads</div></div></div><div class="chart-wrap"><canvas id="mkt-chart"></canvas></div>
       <div class="legend"><span class="legend-item"><span class="legend-dot" style="background:#3b6ea5"></span>Meta Ads</span><span class="legend-item"><span class="legend-dot" style="background:#c8a227"></span>Google Ads</span></div></div>
     <div class="section"><div class="section-hd"><div><div class="section-title">Investimento × crescimento do site</div><div class="section-sub">Faturamento do site pelo Shopify (pedido pago)</div></div></div><div class="table-wrap"><table><thead><tr><th>Mês</th><th class="r">Meta Ads</th><th class="r">Google Ads</th><th class="r">Mídia</th><th class="r">Agência</th><th class="r">Faturamento do site</th><th class="r">Crescimento</th><th class="r">Site ÷ mídia</th><th class="r">Atribuído aos anúncios</th><th>Observação</th></tr></thead><tbody>${
-      R.map((r,i)=>`<tr><td>${mesLbl(r.mes)}</td><td class="r">${brl(r.meta)}</td><td class="r">${brl(r.google)}</td><td class="r"><b>${brl(r.midia)}</b></td><td class="r">${r.ag?brl(r.ag):'—'}</td><td class="r">${r.site?brl(r.site):'—'}</td><td class="r">${i&&r.site&&R[i-1].site?tagVar(varPct(r.site,R[i-1].site)):'—'}</td><td class="r">${r.midia&&r.site?(r.site/r.midia).toFixed(2).replace('.',',')+'×':'—'}</td><td class="r">${r.atr?brl(r.atr):'—'}</td><td style="color:var(--text3);font-size:12px">${r.obs}</td></tr>`).join('')}</tbody>
+      R.map((r,i)=>`<tr><td>${mesLbl(r.mes)}</td><td class="r">${r.midia?brl(r.meta):'—'}</td><td class="r">${r.midia?brl(r.google):'—'}</td><td class="r"><b>${r.midia?brl(r.midia):'—'}</b></td><td class="r">${r.ag?brl(r.ag):'—'}</td><td class="r">${r.site?brl(r.site):'—'}</td><td class="r">${i&&r.site&&R[i-1].site?tagVar(varPct(r.site,R[i-1].site)):'—'}</td><td class="r">${r.midia&&r.site?(r.site/r.midia).toFixed(2).replace('.',',')+'×':'—'}</td><td class="r">${r.atr?brl(r.atr):'—'}</td><td style="color:var(--text3);font-size:12px">${r.obs}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td>Total</td><td class="r">${brl(soma(R,r=>r.meta))}</td><td class="r">${brl(soma(R,r=>r.google))}</td><td class="r">${brl(midia)}</td><td class="r">${ag?brl(ag):'—'}</td><td class="r">${brl(soma(R,r=>r.site))}</td><td></td><td class="r">${midia?(site/midia).toFixed(2).replace('.',',')+'×':'—'}</td><td class="r">${soma(R,r=>r.atr)?brl(soma(R,r=>r.atr)):'—'}</td><td></td></tr></tfoot></table></div></div>` + pendHist;
   barChart('mkt-chart', R.map(r=>mesLbl(r.mes)), [{color:'#3b6ea5', data:R.map(r=>r.meta)},{color:'#c8a227', data:R.map(r=>r.google)}], 240);
 }
@@ -1309,18 +1317,64 @@ function renderFinanceiro(){
    ESTRATÉGIA (espaço reservado)
 ══════════════════════════════════════════ */
 function renderEstrategia(){
-  const cen = [
-    ['Box no Brás','Atacado e preço. Aluguel do box, luvas, equipe, tabela de atacado, estoque mínimo no ponto.'],
-    ['Loja em bairro de São Paulo','Varejo. Aluguel e reforma, equipe, estoque inicial, tráfego pago local.'],
-    ['Atacado e revenda sem ponto fixo','Catálogo e WhatsApp, representantes, marketplaces com o Abner.'],
-    ['Mais venda nas lojas de Minas','Pouso Alegre, bazar e outlet, anúncio local, transferência entre lojas.'],
-  ];
-  document.getElementById('estr-corpo').innerHTML =
-    `<div class="section"><div class="section-hd"><div><div class="section-title">Cenários a comparar</div><div class="section-sub">Mesmo quadro para todos: investimento inicial, custo mensal, venda necessária para empatar e quanto de estoque escoa</div></div></div>
-      <div class="table-wrap"><table><thead><tr><th>Cenário</th><th>O que entra na conta</th><th class="r">Investimento inicial</th><th class="r">Custo mensal</th><th class="r">Ponto de equilíbrio</th><th class="r">Estoque escoado em 12 meses</th></tr></thead><tbody>${
-        cen.map(c=>`<tr><td><b>${c[0]}</b></td><td style="color:var(--text2)">${c[1]}</td><td class="r vazio">a calcular</td><td class="r vazio">a calcular</td><td class="r vazio">a calcular</td><td class="r vazio">a calcular</td></tr>`).join('')}</tbody></table></div></div>`
-    + pend({t:'Estudo comparativo de cenários', d:'Fica para depois da apresentação, com os números fechados. O ponto de equilíbrio de cada cenário depende da margem real por produto e do custo fixo das lojas atuais, que saem das outras abas.',
-        dado:'Margem por produto (Vendas), custo fixo por loja (Canais), estoque por produto e idade (Estoque), cotação de ponto no Brás e em bairro, verba de tráfego local', quem:'Du (estudo) · Samson e Jean (decisão)', onde:'esta aba, quando o estudo estiver pronto'});
+  // base: estoque da planilha (se carregou) ou contagem de 31/08
+  const E = estoqueRows();
+  const pecas = E ? soma(E,r=>r.qtd) : 123635, custoT = E ? soma(E,r=>r.qtd*r.custo) : 1560481, vendaT = E ? soma(E,r=>r.qtd*r.preco) : 3814676;
+  const custo = custoT/pecas, pOutlet = vendaT/pecas;
+  const DED = 0.10;                       // premissa: imposto + taxa de cartão sobre a venda
+  const P_ATAC = 20, P_MISTO = 25;        // premissa: preço médio por peça no atacado e no atacarejo
+  const mg = p => (p*(1-DED)-custo)/p;
+  const VM = vendasMesCanal(), fech = mesesFechados(), um = fech[fech.length-1];
+  const lojasMes = um ? soma(VM.filter(r=>r.mes===um && ehLojaFis(r.canal)), r=>r.total) : 173478;
+  const I = itensRows(); const pMedReal = (I && soma(I,r=>r.qtd)) ? soma(I,r=>r.valor)/soma(I,r=>r.qtd) : 38;
+  const pecasMes = lojasMes/pMedReal, cobertura = pecas/pecasMes;
+  const C = [
+    {n:'Box no Brás (atacado)', o:'Galeria ou Feira da Madrugada. Vende em volume, a preço de atacado.', alug:[2600,8000], eq:6000, out:1500, p:P_ATAC, inv:'R$ 15 a 40 mil', obs:'Aluguel: teto de R$ 2.600 do box de 3 m² na Feira da Madrugada; galerias privadas e luvas ainda sem cotação.'},
+    {n:'Loja de rua no Brás (atacarejo)', o:'Ponto próprio, atacado e varejo juntos.', alug:[3700,25000], eq:9000, out:3000, p:P_MISTO, inv:'R$ 40 a 80 mil', obs:'Aluguel: de R$ 3.700 (120 m² fora do miolo) a R$ 25.000 com IPTU (60 m² em frente à estação), em anúncios.'},
+    {n:'Loja em bairro de São Paulo (varejo)', o:'Mesmo modelo das lojas de Minas, a preço de outlet.', alug:[2800,6000], eq:9000, out:6000, p:pOutlet, inv:'R$ 50 a 100 mil', obs:'Aluguel: pontos de 50 a 70 m² no Tatuapé, em anúncios. Inclui R$ 3.000 de tráfego local.'},
+    {n:'Atacado sem ponto fixo', o:'Catálogo, WhatsApp, revendedoras e marketplace.', alug:[0,0], eq:3500, out:2000, p:P_ATAC, inv:'até R$ 5 mil', obs:'Uma pessoa dedicada, fotos, amostras e frete. Sem aluguel.'},
+    {n:'Mais venda nas lojas de Minas', o:'Anúncio local, bazar de estoque antigo, Pouso Alegre.', alug:[0,0], eq:0, out:2700, p:pOutlet, inv:'nenhum', obs:'Custo incremental: o anúncio local que já está no ar (R$ 90 por dia).'},
+  ].map(c=>{ const m=mg(c.p), f=[c.alug[0]+c.eq+c.out, c.alug[1]+c.eq+c.out]; return {...c, m, f, be:f.map(x=>x/m), pc:f.map(x=>x/m/c.p)}; });
+  const fx = a => a[0]===a[1] ? brl(a[0]) : brl(a[0])+' a '+brl(a[1]);
+  const k1 = v => (v/1000).toFixed(1).replace('.',','); const fk = a => a[0]===a[1] ? 'R$ '+k1(a[0])+' mil' : 'R$ '+k1(a[0])+' a '+k1(a[1])+' mil';
+  const fp = a => a[0]===a[1] ? inteiro(a[0]) : inteiro(a[0])+' a '+inteiro(a[1]);
+  const nec12 = pecas/12, extra = Math.max(0, nec12-pecasMes);
+  document.getElementById('estr-corpo').innerHTML = `
+    <div class="es-aviso">Estudo preliminar para discussão. Os custos de ponto vêm de anúncios e de premissas, não de cotação fechada, e a margem usa o custo e o preço de outlet do estoque. Serve para comparar a ordem de grandeza dos caminhos, não para aprovar investimento.</div>
+    <div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Estoque a escoar</span><span class="kpi-value">${inteiro(pecas)} peças</span><span class="kpi-sub">${brl(custoT)} a custo · ${brl(vendaT)} a preço de outlet</span></div>
+      <div class="kpi"><span class="kpi-label">Ritmo atual das lojas</span><span class="kpi-value">${inteiro(pecasMes)} peças/mês</span><span class="kpi-sub">estimativa: ${brl(lojasMes)} em ${um?mesLbl(um):'set/26'} ÷ ${brl2(pMedReal)} por peça</span></div>
+      <div class="kpi"><span class="kpi-label">Cobertura no ritmo atual</span><span class="kpi-value">${inteiro(cobertura)} meses</span><span class="kpi-sub">sem contar o que ainda entra da produção</span></div>
+      <div class="kpi"><span class="kpi-label">Para zerar em 12 meses</span><span class="kpi-value">${inteiro(nec12)} peças/mês</span><span class="kpi-sub">${inteiro(extra)} a mais por mês do que hoje</span></div>
+    </div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Comparativo de cenários</div><div class="section-sub">Custo fixo mensal, margem depois do custo da peça e quanto precisa vender para empatar</div></div></div>
+      <div class="table-wrap"><table class="cen"><thead><tr><th>Cenário</th><th class="r">Investimento inicial</th><th class="r">Custo fixo por mês</th><th class="r">Margem</th><th class="r">Venda por mês para empatar</th><th class="r">Peças por mês para empatar</th><th class="r">Estoque escoado em 12 meses</th></tr></thead><tbody>${
+        C.map(c=>`<tr><td><b>${c.n}</b><small>${c.o}</small></td><td class="r">${c.inv}</td><td class="r">${fk(c.f)}</td><td class="r">${(c.m*100).toFixed(0)}%</td><td class="r">${fk(c.be)}</td><td class="r">${fp(c.pc)}</td><td class="r">${(c.pc[0]*12/pecas*100).toFixed(0)}${c.pc[0]!==c.pc[1]?' a '+(c.pc[1]*12/pecas*100).toFixed(0):''}%</td></tr>`).join('')}</tbody></table></div>
+      <p class="nota">Margem = (preço − ${(DED*100).toFixed(0)}% de imposto e taxa de cartão − custo médio da peça de ${brl2(custo)}) ÷ preço. No empate o cenário só se paga; o estoque escoado cresce com o que vender acima disso.</p></div>
+    <div class="two-col">
+      <div class="section"><div class="section-hd"><div><div class="section-title">O que os números dizem</div></div></div>
+        <ul class="lista">
+          <li><b>Uma loja sozinha não resolve o estoque.</b> Uma loja de bairro vendendo o mesmo que Santa Rita escoa cerca de ${inteiro(55903/pOutlet*12)} peças por ano, ${(55903/pOutlet*12/pecas*100).toFixed(0)}% do estoque.</li>
+          <li><b>Volume vem do atacado.</b> Para vender as ${inteiro(extra)} peças a mais por mês, o atacado precisaria faturar cerca de ${brl(extra*P_ATAC)} por mês a ${brl2(P_ATAC)} a peça.</li>
+          <li><b>O atacado sem ponto é o teste mais barato:</b> empata com ${brl(C[3].be[0])} por mês e quase não exige investimento.</li>
+          <li><b>As lojas de Minas têm o melhor retorno por real gasto:</b> o anúncio local se paga com ${inteiro(C[4].pc[0])} peças a mais por mês.</li>
+          <li><b>O Brás troca margem por giro:</b> a ${brl2(P_ATAC)} a peça a margem cai para ${(mg(P_ATAC)*100).toFixed(0)}%, contra ${(mg(pOutlet)*100).toFixed(0)}% no varejo.</li>
+        </ul></div>
+      <div class="section"><div class="section-hd"><div><div class="section-title">Sequência sugerida</div></div></div>
+        <ol class="lista">
+          <li>Segurar a produção até a cobertura cair.</li>
+          <li>Manter o anúncio local e abrir Pouso Alegre com bazar do estoque antigo.</li>
+          <li>Montar a tabela de atacado e testar a venda sem ponto por 60 dias.</li>
+          <li>Se o atacado girar, testar o Brás com box ou ponto temporário de 60 a 90 dias.</li>
+          <li>Decidir ponto fixo em São Paulo só com o resultado desses testes.</li>
+        </ol></div>
+    </div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Premissas de cada cenário</div><div class="section-sub">O que precisa ser trocado por cotação real</div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Cenário</th><th class="r">Preço por peça</th><th class="r">Aluguel</th><th class="r">Equipe</th><th class="r">Outros</th><th>De onde vem</th></tr></thead><tbody>${
+        C.map(c=>`<tr><td>${c.n}</td><td class="r">${brl2(c.p)}</td><td class="r">${c.alug[1]?fx(c.alug):'—'}</td><td class="r">${c.eq?brl(c.eq):'—'}</td><td class="r">${brl(c.out)}</td><td style="color:var(--text2);font-size:12px">${c.obs}</td></tr>`).join('')}</tbody></table></div>
+      <p class="nota">Equipe a R$ 3.000 por pessoa com encargos (premissa). Preço de atacado de ${brl2(P_ATAC)} e de atacarejo de ${brl2(P_MISTO)} por peça são premissas; o preço de outlet (${brl2(pOutlet)}) é a média do estoque a 50% da etiqueta.</p></div>`
+    + pend({t:'Para fechar o estudo', d:'Com estes dados as faixas viram números e o estudo pode sustentar uma decisão de investimento.',
+        dado:'Cotação de box e de luvas em galerias do Brás; cotação de ponto em dois ou três bairros; tabela de preço de atacado; itens vendidos por produto (para saber o que gira); idade do estoque por produto', quem:'Du (cotações) · Kris (tabela de atacado e custo) · Gassen (itens do Bling)', onde:'esta aba; os itens vendidos entram na aba <b>itens-vendidos</b>'});
 }
 
 /* ══════════════════════════════════════════
