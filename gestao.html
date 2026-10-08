@@ -267,6 +267,8 @@ table.cen td:first-child{min-width:210px}
 table.cen td.r{white-space:nowrap}
 #tab-estrategia td small{max-width:none}
 
+.tb-compacta{font-size:12.5px} .tb-compacta th{white-space:normal;line-height:1.25;vertical-align:bottom} .tb-compacta td,.tb-compacta th{padding-left:6px;padding-right:6px}
+
 </style>
 </head>
 <body>
@@ -282,6 +284,7 @@ table.cen td.r{white-space:nowrap}
     <button class="nav-tab" onclick="goTab('entrega',this)">Entrega</button>
     <button class="nav-tab" onclick="goTab('marketing',this)">Marketing</button>
     <button class="nav-tab" onclick="goTab('financeiro',this)">Financeiro</button>
+    <button class="nav-tab" onclick="goTab('resultado',this)">Resultado</button>
     <button class="nav-tab" onclick="goTab('estrategia',this)">Estratégia</button>
     <button class="nav-tab" onclick="goTab('dados',this)">Dados</button>
   </div>
@@ -309,6 +312,7 @@ table.cen td.r{white-space:nowrap}
   <div class="kpi-grid" id="pr-kpis"></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Manter a estrutura × terceirizar</div><div class="section-sub">Custo comparado no mesmo período e para o mesmo volume de peças</div></div></div><div class="kpi-grid" id="pr-cenarios"></div><div id="pr-cenarios-nota"></div></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Produção por mês</div><div class="section-sub">Peças produzidas e mão de obra do mês</div></div></div><div id="pr-serie"></div></div>
+  <div class="section"><div class="section-hd"><div><div class="section-title">Próximos lançamentos</div><div class="section-sub">Coleções, drops e eventos · fonte: aba proximos-lancamentos</div></div></div><div id="pr-lanc"></div></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Em produção agora</div><div class="section-sub">O que está em corte e costura hoje</div></div></div><div id="pr-agora"></div></div>
 </div>
 
@@ -331,7 +335,8 @@ table.cen td.r{white-space:nowrap}
     <div class="section"><div class="section-hd"><div><div class="section-title">Melhores semanas do mês</div><div class="section-sub">Venda média por dia em cada semana do mês (meses fechados)</div></div></div><div class="hbar-wrap" id="can-semanas"></div><p class="nota" id="can-semanas-nota"></p></div>
     <div class="section"><div class="section-hd"><div><div class="section-title">Projeção dos próximos meses</div><div class="section-sub">Ritmo dos últimos 30 dias × dias de cada mês</div></div></div><div class="table-wrap" id="can-proj"></div><p class="nota">Projeção simples, sem sazonalidade: o histórico começa em junho e ainda não cobre um ano.</p></div>
   </div>
-  <div class="section"><div class="section-hd"><div><div class="section-title">Real × planejado</div><div class="section-sub">Meta de venda por canal e mês</div></div></div><div id="can-meta"></div></div>
+  <div class="section"><div class="section-hd"><div><div class="section-title">Projeção do mês × meta, por canal</div><div class="section-sub">Realizado, projeção até o fim do mês e as duas referências de meta</div></div></div><div id="can-projmeta"></div></div>
+  <div class="section"><div class="section-hd"><div><div class="section-title">Real × planejado, meses anteriores</div><div class="section-sub">Metas lançadas na aba metas</div></div></div><div id="can-meta"></div></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Formas de pagamento nas lojas</div><div class="section-sub" id="can-formas-sub"></div></div></div><div class="table-wrap" id="can-formas"></div><div id="can-formas-obs"></div></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Faturamento, despesas e resultado por loja</div><div class="section-sub" id="can-res-sub"></div></div></div><div class="table-wrap" id="can-resultado"></div><div id="can-resultado-pend"></div></div>
 </div>
@@ -342,6 +347,8 @@ table.cen td.r{white-space:nowrap}
     <p class="ph-sub">Crescimento mês a mês, produtos mais vendidos, giro e custo médio</p></div></div>
   <div class="kpi-grid" id="ven-kpis"></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Crescimento das vendas</div><div class="section-sub">Todos os canais somados, mês a mês</div></div></div><div class="chart-wrap"><canvas id="ven-chart"></canvas></div><div class="table-wrap" style="margin-top:14px" id="ven-cresc"></div></div>
+  <div id="ven-bling" class="pilha"></div>
+  <div id="ven-pecas" class="pilha"></div>
   <div id="ven-produtos" class="pilha"></div>
 </div>
 
@@ -364,6 +371,7 @@ table.cen td.r{white-space:nowrap}
 <div class="tab-panel" id="tab-financeiro">
   <div class="ph"><div class="ph-left"><span class="eyebrow">Caixa</span><h1 class="ph-title">Financeiro</h1>
     <p class="ph-sub">Entradas, despesas, salários e resultado · fonte: controle de contas (aba contas)</p></div></div>
+  <div class="section"><div class="section-hd"><div><div class="section-title">Ativo e passivo</div><div class="section-sub">O que a Kabak tem e o que deve, com data-base · fonte: aba balanco</div></div></div><div id="fin-bal"></div></div>
   <div class="kpi-grid" id="fin-kpis"></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Fluxo de caixa pelo extrato bancário</div><div class="section-sub" id="fin-ext-sub"></div></div></div><div id="fin-ext"></div></div>
   <div class="two-col" id="fin-ext-cats" style="display:none">
@@ -377,6 +385,13 @@ table.cen td.r{white-space:nowrap}
   </div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Faturamento × caixa</div><div class="section-sub">O que foi vendido no mês e o que entrou na conta (venda não é caixa: há prazo de repasse)</div></div></div><div class="table-wrap" id="fin-fat"></div></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Lucro e projeção financeira</div></div></div><div id="fin-pend"></div></div>
+</div>
+
+<!-- RESULTADO -->
+<div class="tab-panel" id="tab-resultado">
+  <div class="ph"><div class="ph-left"><span class="eyebrow">Lucro</span><h1 class="ph-title">Resultado do mês</h1>
+    <p class="ph-sub">Faturamento, despesas e lucro · custos fixos com o total · custo total e por peça</p></div></div>
+  <div id="res-corpo" class="pilha"><div class="loading"><span class="spinner"></span></div></div>
 </div>
 
 <!-- ESTRATÉGIA -->
@@ -918,6 +933,13 @@ const ABAS_DEF = [
   ['marketing','marketing',       ['mes','meta_ads'],                'mes · meta_ads · google_ads · agencia · faturamento_atribuido · observacao',        'Marketing inteiro'],
   ['metas',    'metas',           ['mes','canal','meta'],            'mes · canal · meta',                                                                'Canais: real × planejado'],
   ['extrato',  'extrato-mensal',  ['mes','tipo','categoria','valor'], 'mes · tipo (entrada, saida, saldo) · categoria · valor · lancamentos',            'Financeiro: fluxo de caixa pelo extrato bancário'],
+  ['pecas',    'pecas-mes',       ['mes','canal','pecas'],           'mes · canal · pedidos · pecas · valor · fonte',                                     'Vendas e Resultado: peças vendidas, custo por peça'],
+  ['top',      'top-produtos',    ['mes','produto','pecas'],         'mes · posicao · produto · pecas · valor',                                           'Vendas: produto mais vendido por mês'],
+  ['balanco',  'balanco',         ['grupo','item'],                  'grupo (ativo, passivo) · conta · item · valor · data_base · fonte · status',        'Financeiro: ativo e passivo'],
+  ['lancprod', 'proximos-lancamentos', ['quando','lancamento'],      'quando · lancamento · o_que · status · fonte',                                      'Produção: próximos lançamentos'],
+  ['blingCan', 'bling-canais',    ['periodo','canal','pecas'],       'periodo (2026-06 ou 2026-06-01 a 2026-10-08) · canal · pedidos · pecas · valor · frete · fonte', 'Vendas: peças por canal pelo dashboard do Bling (inclui o site)'],
+  ['blingProd','bling-produtos',  ['periodo','produto','pecas'],     'periodo · posicao · produto · pecas · valor · custo_cadastrado',                    'Vendas: produtos mais vendidos em todos os canais'],
+  ['blingUF',  'bling-estados',   ['periodo','estado','pecas'],      'periodo · estado · pedidos · pecas · valor · frete_medio',                          'Vendas: venda online por estado'],
   ['caixa',    'caixa-lojas',     ['data','loja','forma','valor'],   'data · loja · forma · parcelas · valor · caixa_fechado · observacao',               'Canais: formas de pagamento das lojas'],
 ];
 
@@ -932,9 +954,26 @@ function goTab(id, btn){
   if(loaded) renderTab(id);
 }
 const RENDER = {aportes:renderAportes, producao:renderProducao, estoque:renderEstoque, canais:renderCanais, vendas:renderVendas,
-                entrega:renderEntrega, marketing:renderMarketing, financeiro:renderFinanceiro, estrategia:renderEstrategia, dados:renderDados};
+                entrega:renderEntrega, marketing:renderMarketing, financeiro:renderFinanceiro, resultado:renderResultado, estrategia:renderEstrategia, dados:renderDados};
 function renderTab(id){ try{ RENDER[id] && RENDER[id](); }catch(e){ console.error('render', id, e); } }
 
+/* ── vendas por canal: lojas e Shopee pelo Bling, site pelo Shopify, e o balcão lançado na loja do site ── */
+function vendasCanais(){
+  if(D._vc) return D._vc;
+  const base=(D.canais||[]).filter(r=>r.conta_como_venda==='sim' && r.loja!=='Site (inferido)');
+  const site=siteShopify();
+  if(!site.length){ D._vc=base; return base; }
+  const P=D.pedidos||[], bal={};
+  if(P.length && ('numero_loja' in P[0])){
+    P.filter(r=>r.conta_como_venda==='sim' && /site/i.test(r.loja||'') && !String(r.numero_loja||'').trim() && r.data).forEach(r=>{
+      const k=r.data.slice(0,10); (bal[k]=bal[k]||{data:k, loja:'Balcão', total:0, pedidos:0, conta_como_venda:'sim'});
+      bal[k].total+=parseFloat(r.total)||0; bal[k].pedidos++; });
+  }
+  const balc=Object.values(bal).map(b=>({...b, total:String(b.total), pedidos:String(b.pedidos)}));
+  D._vc=[...base.filter(r=>!ehSiteBling(r.loja)), ...balc, ...site].sort((x,y)=>(x.data||'').localeCompare(y.data||''));
+  D._temBalcao = balc.length>0;
+  return D._vc;
+}
 /* ── agregados de venda (todas as abas usam) ── */
 function vendasMesCanal(){
   if(D._vmc) return D._vmc;
@@ -995,6 +1034,7 @@ function renderAportes(){
    PRODUÇÃO
 ══════════════════════════════════════════ */
 function renderProducao(){
+  renderLancamentos();
   document.getElementById('pr-kpis').innerHTML = ['custo_minimo_fabrica_mes','capacidade_pecas_dia','capacidade_pecas_mes','custo_por_peca_propria','custo_por_peca_terceirizada'].map(c=>kInd(c)).join('');
   document.getElementById('pr-cenarios').innerHTML = ['custo_manter_periodo','custo_enxugar_periodo','custo_terceirizar_periodo'].map(c=>kInd(c)).join('');
   const tem = ['custo_manter_periodo','custo_enxugar_periodo','custo_terceirizar_periodo'].filter(c=>IND[c]);
@@ -1101,7 +1141,7 @@ function renderCanais(){
       const t=soma(linhas,r=>r.total), p=soma(linhas,r=>r.pedidos), d=new Set(V.filter(r=>nomeCanal(r.loja)===c).map(r=>r.data)).size||1;
       return `<tr><td><span class="sw" style="background:${corCanal(c)}"></span><b>${c}</b></td>${meses.map(m=>{const x=cel(c,m); return `<td class="r${best&&best.mes===m?' best':''}">${x?brl(x.total):'—'}<small>${x?inteiro(x.pedidos)+' ped.':''}</small></td>`;}).join('')}<td class="r">${p?brl2(t/p):'—'}</td><td class="r">${(p/d).toFixed(1).replace('.',',')}</td></tr>`; }).join('')}</tbody>
     <tfoot><tr><td>Total</td>${totMes.map(x=>`<td class="r">${brl(x.v)}</td>`).join('')}<td class="r">${brl2(soma(VM,r=>r.total)/(soma(VM,r=>r.pedidos)||1))}</td><td class="r"></td></tr></tfoot></table>
-    <p class="nota">* mês em andamento. O melhor mês fechado de cada canal está destacado.</p>`;
+    <p class="nota">* mês em andamento. O melhor mês fechado de cada canal está destacado.${D._temBalcao?' Balcão: vendas de loja física lançadas na loja do site no Bling, sem pedido no Shopify (até agosto).':''}</p>`;
   // melhores semanas do mês (meses fechados)
   const fechSet = new Set(fech.map(x=>x.m)); const sem = [1,2,3,4,5].map(s=>({s, v:0, d:new Set()}));
   V.filter(r=>fechSet.has(r.data.slice(0,7))).forEach(r=>{ const dia=+r.data.slice(8,10), s=Math.min(5,Math.ceil(dia/7)); sem[s-1].v+=parseFloat(r.total)||0; sem[s-1].d.add(r.data); });
@@ -1110,10 +1150,11 @@ function renderCanais(){
   const bs=[...semM].sort((a,b)=>b.value-a.value)[0];
   document.getElementById('can-semanas-nota').innerHTML = fech.length ? `Semana mais forte: <b>${bs.label.toLowerCase()}</b>, com ${brl(bs.value)} por dia em média (${fech.length} meses fechados).` : 'Ainda não há mês fechado.';
   // projeção
-  const vd = canais.map(c=>({c, v:vendaDiaria(30, x=>x===c)})); const prox=[1,2,3].map(n=>addMes(mesAtual,n));
+  const vd = canais.map(c=>({c, v:vendaDiaria(30, x=>x===c)})).filter(x=>x.v>0); const prox=[1,2,3].map(n=>addMes(mesAtual,n));
   document.getElementById('can-proj').innerHTML = `<table><thead><tr><th>Canal</th><th class="r">Por dia (30 d)</th>${prox.map(m=>`<th class="r">${mesLbl(m)}</th>`).join('')}</tr></thead><tbody>${
     vd.map(x=>`<tr><td><span class="sw" style="background:${corCanal(x.c)}"></span>${x.c}</td><td class="r">${brl(x.v)}</td>${prox.map(m=>`<td class="r">${brl(x.v*diasNoMes(m))}</td>`).join('')}</tr>`).join('')}</tbody>
     <tfoot><tr><td>Total</td><td class="r">${brl(soma(vd,x=>x.v))}</td>${prox.map(m=>`<td class="r">${brl(soma(vd,x=>x.v)*diasNoMes(m))}</td>`).join('')}</tr></tfoot></table>`;
+  renderProjMeta(vd);
   // real × planejado
   const M = T.metas;
   if(M){
@@ -1141,7 +1182,7 @@ function renderCanais(){
   const mRef = sel!=='todos' ? sel : (fech.length ? fech[fech.length-1].m : mesAtual);
   document.getElementById('can-res-sub').textContent = `${mesLbl(mRef)} · custo fixo mensal da aba custos-fixos`;
   if(CUSTOS.length){
-    const lojasC=[...new Set(CUSTOS.map(c=>c.loja))];
+    const lojasC=[...new Set(CUSTOS.filter(c=>!/geral/i.test(c.loja)).map(c=>c.loja))];
     document.getElementById('can-resultado').innerHTML = `<table><thead><tr><th>Loja</th><th class="r">Faturamento</th><th class="r">Custo fixo</th><th class="r">Sobra antes do custo da peça</th><th class="r">Custo fixo ÷ faturamento</th><th>O que compõe o custo fixo</th></tr></thead><tbody>${
       lojasC.map(l=>{ const cf=soma(CUSTOS.filter(c=>c.loja===l),c=>c.valor); const f=soma(VM.filter(x=>x.mes===mRef && esSemAcento(x.canal).includes(esSemAcento(l))),x=>x.total);
         return `<tr><td><b>${l}</b></td><td class="r">${f?brl(f):'—'}</td><td class="r">${brl(cf)}</td><td class="r ${f-cf>=0?'es-pos':'es-neg'}">${f?brl(f-cf):'—'}</td><td class="r">${f?pct(cf,f):'—'}</td><td style="color:var(--text3);font-size:12px">${CUSTOS.filter(c=>c.loja===l).map(c=>c.tipo).join(' · ')}</td></tr>`; }).join('')}</tbody></table>`;
@@ -1167,8 +1208,9 @@ function renderVendas(){
     <div class="kpi"><span class="kpi-label">Desde o primeiro mês</span><span class="kpi-value">${ult&&pri&&ult!==pri?(varPct(ult.v,pri.v)>=0?'+':'')+varPct(ult.v,pri.v).toFixed(1).replace('.',',')+'%':'—'}</span><span class="kpi-sub">${pri?mesLbl(pri.m)+': '+brl(pri.v):''}</span></div>
     <div class="kpi"><span class="kpi-label">Média mensal</span><span class="kpi-value">${fech.length?brl(soma(fech,x=>x.v)/fech.length):'—'}</span><span class="kpi-sub">${fech.length} meses fechados</span></div>`;
   if(fech.length) lineChart('ven-chart', fech.map(x=>mesLbl(x.m)), [{color:'#1a1a1a', data:fech.map(x=>x.v)}], 220);
-  document.getElementById('ven-cresc').innerHTML = `<table><thead><tr><th>Mês</th><th class="r">Faturamento</th><th class="r">Variação</th><th class="r">Pedidos</th><th class="r">Variação</th><th class="r">Ticket médio</th></tr></thead><tbody>${
-    tot.map((x,i)=>`<tr><td>${mesLbl(x.m)}${x.m===mesAtual?' (parcial)':''}</td><td class="r">${brl(x.v)}</td><td class="r">${i&&x.m!==mesAtual?tagVar(varPct(x.v,tot[i-1].v)):'—'}</td><td class="r">${inteiro(x.p)}</td><td class="r">${i&&x.m!==mesAtual?tagVar(varPct(x.p,tot[i-1].p)):'—'}</td><td class="r">${x.p?brl2(x.v/x.p):'—'}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('ven-cresc').innerHTML = `<table><thead><tr><th>Mês</th><th class="r">Faturamento</th><th class="r">Variação</th><th class="r">Pedidos</th><th class="r">Variação</th><th class="r">Peças (sem o site)</th><th class="r">Ticket médio</th></tr></thead><tbody>${
+    tot.map((x,i)=>`<tr><td>${mesLbl(x.m)}${x.m===mesAtual?' (parcial)':''}</td><td class="r">${brl(x.v)}</td><td class="r">${i&&x.m!==mesAtual?tagVar(varPct(x.v,tot[i-1].v)):'—'}</td><td class="r">${inteiro(x.p)}</td><td class="r">${i&&x.m!==mesAtual?tagVar(varPct(x.p,tot[i-1].p)):'—'}</td><td class="r">${pecasMes(x.m)?inteiro(pecasMes(x.m)):'—'}</td><td class="r">${x.p?brl2(x.v/x.p):'—'}</td></tr>`).join('')}</tbody></table>`;
+  renderPecasTop();
   // produtos
   const I = itensRows(), E = estoqueRows(), el = document.getElementById('ven-produtos');
   if(!I){
@@ -1254,24 +1296,25 @@ function renderMarketing(){
    FINANCEIRO
 ══════════════════════════════════════════ */
 function renderFinanceiro(){
+  renderBalanco();
   const L = FIN.lanc, VM = vendasMesCanal();
   // extrato bancário resumido (aba extrato-mensal)
   const EX = T.extrato, elx = document.getElementById('fin-ext');
   if(EX){
     const X = EX.map(r=>({mes:normMes(r.mes), tipo:esSemAcento(r.tipo), cat:(r.categoria||'').trim(), v:num(r.valor)})).filter(r=>r.mes);
     const ms = [...new Set(X.filter(r=>r.tipo!=='saldo').map(r=>r.mes))].sort();
-    const ehAp = c => /aporte|cheque/i.test(c);
+    const ehAp = c => /aporte/i.test(c), ehConf = c => /confirmar/i.test(c);
     const g = (m,f) => soma(X.filter(r=>r.mes===m && f(r)), r=>r.v);
-    const lin = ms.map(m=>({m, op:g(m,r=>r.tipo==='entrada'&&!ehAp(r.cat)), ap:g(m,r=>r.tipo==='entrada'&&ehAp(r.cat)), sa:g(m,r=>r.tipo==='saida'), sd:(X.find(r=>r.tipo==='saldo'&&r.mes===m)||{}).v}));
+    const lin = ms.map(m=>({m, op:g(m,r=>r.tipo==='entrada'&&!ehAp(r.cat)&&!ehConf(r.cat)), cf:g(m,r=>r.tipo==='entrada'&&ehConf(r.cat)), ap:g(m,r=>r.tipo==='entrada'&&ehAp(r.cat)), sa:g(m,r=>r.tipo==='saida'), sd:(X.find(r=>r.tipo==='saldo'&&r.mes===m)||{}).v}));
     const T_ = k => soma(lin, x=>x[k]);
     document.getElementById('fin-ext-sub').textContent = `Extrato do Itaú resumido por mês, de ${mesLbl(ms[0])} a ${mesLbl(ms[ms.length-1])} · fonte: aba extrato-mensal`;
     elx.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Aportes</th><th class="r">Saídas</th><th class="r">Resultado da operação</th><th class="r">Saldo no fim do mês</th></tr></thead><tbody>${
       lin.map(x=>`<tr><td>${mesLbl(x.m)}</td><td class="r">${brl(x.op)}</td><td class="r">${x.ap?brl(x.ap):'—'}</td><td class="r">${brl(x.sa)}</td><td class="r ${x.op-x.sa>=0?'es-pos':'es-neg'}">${brl(x.op-x.sa)}</td><td class="r">${x.sd!=null?brl(x.sd):'—'}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td>Total</td><td class="r">${brl(T_('op'))}</td><td class="r">${brl(T_('ap'))}</td><td class="r">${brl(T_('sa'))}</td><td class="r">${brl(T_('op')-T_('sa'))}</td><td class="r"></td></tr></tfoot></table></div>
-      <p class="nota">Resultado da operação = entradas da operação − saídas, sem contar os aportes. No período, a operação consumiu ${brl(Math.max(0,T_('sa')-T_('op')))} a mais do que gerou, coberto por ${brl(T_('ap'))} de aportes. Depósitos em cheque ainda bloqueados contam como aporte no mês em que entraram.</p>`;
+      <p class="nota">Resultado da operação = entradas da operação − saídas, sem contar os aportes. No período, a operação consumiu ${brl(Math.max(0,T_('sa')-T_('op')))} a mais do que gerou, coberto por ${brl(T_('ap'))} de aportes.${T_('cf')?' Há '+brl(T_('cf'))+' depositados e bloqueados, com origem a confirmar: entram no saldo, mas não foram contados como entrada da operação nem como aporte.':''}</p>`;
     const porCat = t => { const o={}; X.filter(r=>r.tipo===t).forEach(r=>o[r.cat]=(o[r.cat]||0)+r.v); const tt=soma(Object.values(o),v=>v); return Object.entries(o).map(([label,value])=>({label,value,fmt:brl(value)+' · '+pct(value,tt)})).sort((a,b)=>b.value-a.value); };
     document.getElementById('fin-ext-cats').style.display='';
-    hBars('fin-ext-sai', porCat('saida')); hBars('fin-ext-ent', porCat('entrada'), l=>/aporte|cheque/i.test(l)?'#3b6ea5':'#2d7a4f');
+    hBars('fin-ext-sai', porCat('saida')); hBars('fin-ext-ent', porCat('entrada'), l=>/aporte/i.test(l)?'#3b6ea5':/confirmar/i.test(l)?'#b9b5aa':'#2d7a4f');
   } else {
     document.getElementById('fin-ext-sub').textContent=''; document.getElementById('fin-ext-cats').style.display='none';
     elx.innerHTML = pend({t:'Fluxo de caixa pelo extrato', d:'Entradas, saídas e saldo de cada mês, tirados do extrato bancário e resumidos por categoria, sem dados de clientes.', dado:'Extrato da conta, mês a mês', quem:'Samson (acesso à conta)', onde:'aba <b>extrato-mensal</b>: mes · tipo · categoria · valor · lancamentos'});
@@ -1309,9 +1352,7 @@ function renderFinanceiro(){
         return `<tr><td>${mesLbl(m)}</td><td class="r">${brl(f)}</td><td class="r">${e!=null?brl(e):'—'}</td><td class="r">${e!=null?brl(e-f):'—'}</td><td class="r">${s!=null?brl(s):'—'}</td><td class="r">${s!=null&&f?pct(s,f):'—'}</td></tr>`;}).join('')}</tbody></table>`;
   }
   document.getElementById('fin-pend').innerHTML =
-    pend({t:'Lucro', d:'Lucro = faturamento − custo das peças vendidas − despesas. As despesas já estão no painel; falta o custo das peças vendidas em cada mês.',
-      dado:'Itens vendidos por mês e o custo unitário de cada produto', quem:'Bling (itens) · Kris (custo por produto)', onde:'abas <b>itens-vendidos</b> e <b>estoque</b>'})
-    + pend({t:'Saldo, extrato e meses anteriores', d:'O saldo em conta e o fluxo de caixa de junho a agosto. O controle de contas começa em setembro.',
+    pend({t:'Saldo, extrato e meses anteriores', d:'O saldo em conta e o fluxo de caixa de junho a agosto. O controle de contas começa em setembro.',
       dado:'Extrato do Itaú mês a mês desde junho e o saldo de abertura', quem:'Samson (acesso à conta)', onde:'aba <b>contas</b> (linha "SALDO INICIAL") e indicador <code>saldo_bancario</code>'})
     + pend({t:'Projeção financeira', d:'Caixa previsto para os próximos meses: vendas projetadas (aba Canais), menos as contas fixas, as parcelas da mão de obra e a verba de mídia já combinadas.',
       dado:'Contas dos próximos meses lançadas com vencimento; prazo de repasse de cada meio de pagamento', quem:'Kris (contas futuras) · Gassen (prazo do Pagar.me e da Shopee)', onde:'aba <b>contas</b>, lançamentos futuros sem data de pagamento'});
@@ -1415,7 +1456,7 @@ async function init(){
     const shopifyN = normRows(shopify, ['data'], ['gross_sales','net_sales','total_sales','pedidos']).map(r=>(!('conta_como_venda' in r) && 'conta_como_venda_no_app' in r) ? {...r, conta_como_venda:r.conta_como_venda_no_app} : r);
     D = {canais:canaisN, pedidos:normRows(pedidos,['data'],['total']), shopify:shopifyN, inv:inv||[]};
     if(fechados.length){ const f=normRows(fechados,['data'],numCanais), tem=new Set(canaisN.map(r=>`${r.data}|${r.loja}`)); D.canais=[...f.filter(r=>r.data && r.loja && !tem.has(`${r.data}|${r.loja}`)), ...D.canais].sort((a,b)=>(a.data||'').localeCompare(b.data||'')); }
-    CUSTOS = (custosRaw||[]).map(r=>({loja:(r.loja||'').trim(), tipo:(r.tipo||'').trim(), valor:num(r.valor)})).filter(c=>c.loja && c.valor>0);
+    CUSTOS = (custosRaw||[]).map(r=>({loja:(r.loja||'').trim(), tipo:(r.tipo||'').trim(), valor:num(r.valor), mes:normMes(r.mes)})).filter(c=>c.loja && c.valor>0);
     // contas
     let ct = contas; const okCt = r => r.length && ['data vencimento','pagamento'].every(c=>Object.keys(r[0]).map(esSemAcento).includes(c));
     if(!okCt(ct)) ct = await esAba('contas', ['data vencimento','pagamento']) || [];
@@ -1438,6 +1479,204 @@ async function init(){
 function aviso(t){ const b=document.createElement('div'); b.className='es-aviso'; b.style.margin='16px'; b.textContent=t; document.body.insertBefore(b, document.querySelector('.tab-panel')); }
 window.addEventListener('load', init);
 window.addEventListener('resize', ()=>{ if(loaded){ const a=document.querySelector('.tab-panel.active')?.id?.replace('tab-',''); if(a) renderTab(a); } });
+
+/* ══════════════════════════════════════════
+   SEÇÕES DE 08/10: peças, projeção × meta, resultado, custos fixos, custo por peça, ativo e passivo, lançamentos
+══════════════════════════════════════════ */
+// custo médio da peça = estoque das lojas a custo ÷ peças (contagem de 31/08: R$ 1.560.481 ÷ 123.635)
+const CUSTO_PECA = 1560481/123635;
+const CANAL_PECA = c => /balc/i.test(c) ? 'Balcão' : c;
+function pecasRows(){
+  if(!T.pecas) return [];
+  return T.pecas.map(r=>({mes:normMes(r.mes), canal:CANAL_PECA((r.canal||'').trim()), pedidos:num(r.pedidos), pecas:num(r.pecas), valor:num(r.valor)})).filter(r=>r.mes && r.pecas);
+}
+const pecasMes = (m, f) => soma(pecasRows().filter(r=>r.mes===m && (!f || f(r.canal))), r=>r.pecas);
+const nPend = (t) => `<span class="kpi-tag warn">${t||'a levantar'}</span>`;
+
+/* ── Vendas: peças por canal e mês + produto mais vendido ── */
+function renderPecasTop(){
+  renderBling();
+  const el = document.getElementById('ven-pecas'); if(!el) return;
+  const P = pecasRows(), mesAtual = esHoje().slice(0,7);
+  let h = '';
+  if(P.length){
+    const ms=[...new Set(P.map(r=>r.mes))].sort(), cs=['Cachoeira','Santa Rita','Balcão','Shopee'].filter(c=>P.some(r=>r.canal===c));
+    const cel=(m,c)=>P.find(r=>r.mes===m&&r.canal===c);
+    h += `<div class="section"><div class="section-hd"><div><div class="section-title">Peças vendidas por canal e mês</div><div class="section-sub">Itens dos pedidos atendidos no Bling · o site ainda não tem itens lidos · fonte: aba pecas-mes</div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Mês</th>${cs.map(c=>`<th class="r">${c}</th>`).join('')}<th class="r">Total de peças</th><th class="r">Site</th><th class="r">Peças por pedido</th><th class="r">Preço médio por peça</th></tr></thead><tbody>${
+      ms.map(m=>{ const L=P.filter(r=>r.mes===m), pc=soma(L,r=>r.pecas), pd=soma(L,r=>r.pedidos), v=soma(L,r=>r.valor);
+        return `<tr><td>${mesLbl(m)}${m===mesAtual?' (parcial)':''}</td>${cs.map(c=>{const x=cel(m,c); return `<td class="r">${x?inteiro(x.pecas):'—'}<small>${x?inteiro(x.pedidos)+' ped.':''}</small></td>`;}).join('')}<td class="r"><b>${inteiro(pc)}</b></td><td class="r">${(()=>{const b=(T.blingCan||[]).find(r=>normMes(r.periodo)===m&&!/ a /.test(r.periodo||'')&&/site/i.test(r.canal||'')); return b?inteiro(num(b.pecas)):nPend();})()}</td><td class="r">${pd?(pc/pd).toFixed(1).replace('.',','):'—'}</td><td class="r">${pc?brl2(v/pc):'—'}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td>Total</td>${cs.map(c=>`<td class="r">${inteiro(soma(P.filter(r=>r.canal===c),r=>r.pecas))}</td>`).join('')}<td class="r">${inteiro(soma(P,r=>r.pecas))}</td><td></td><td class="r">${(soma(P,r=>r.pecas)/(soma(P,r=>r.pedidos)||1)).toFixed(1).replace('.',',')}</td><td class="r">${brl2(soma(P,r=>r.valor)/(soma(P,r=>r.pecas)||1))}</td></tr></tfoot></table></div>
+      <p class="nota">Outubro vai até ${(T.pecas.find(r=>/até/.test(r.fonte||''))||{}).fonte?.match(/até (\S+)/)?.[1]||'a última leitura'}. As peças do site entram quando a casa ler os itens dos pedidos do site no Bling ou no Shopify.</p></div>`;
+  } else h += `<div class="section">${pend({t:'Peças vendidas por canal e mês', d:'Quantidade de peças vendidas, ao lado do valor.', dado:'Itens dos pedidos do Bling por mês e canal', quem:'Gassen (base kabak-dados)', onde:'aba <b>pecas-mes</b>: mes · canal · pedidos · pecas · valor'})}</div>`;
+  const TP = T.top;
+  if(TP){
+    const R = TP.map(r=>({mes:normMes(r.mes), pos:num(r.posicao), produto:(r.produto||'').trim(), pecas:num(r.pecas), valor:num(r.valor)})).filter(r=>r.mes&&r.produto);
+    const ms=[...new Set(R.map(r=>r.mes))].sort().reverse();
+    h += `<div class="section"><div class="section-hd"><div><div class="section-title">Produto mais vendido por mês</div><div class="section-sub">Em peças, nas lojas, no balcão e na Shopee · o nome junta tamanhos e cores · fonte: aba top-produtos</div></div></div>
+      <div class="kpi-grid">${ms.map(m=>{const t=R.filter(r=>r.mes===m).sort((a,b)=>a.pos-b.pos)[0]; return `<div class="kpi"><span class="kpi-label">${mesLbl(m)}${m===mesAtual?' (parcial)':''}</span><span class="kpi-value" style="font-size:17px;line-height:1.25">${t.produto}</span><span class="kpi-sub">${inteiro(t.pecas)} peças · ${brl(t.valor)}</span></div>`;}).join('')}</div>
+      <div class="two-col" style="margin-top:14px">${ms.map(m=>`<div class="table-wrap"><table><thead><tr><th>${mesLbl(m)} · top 5</th><th class="r">Peças</th><th class="r">Valor</th></tr></thead><tbody>${
+        R.filter(r=>r.mes===m).sort((a,b)=>a.pos-b.pos).slice(0,5).map(r=>`<tr><td>${r.pos}. ${r.produto}</td><td class="r">${inteiro(r.pecas)}</td><td class="r">${brl(r.valor)}</td></tr>`).join('')}</tbody></table></div>`).join('')}</div></div>`;
+  }
+  el.innerHTML = h;
+}
+
+/* ── Canais: projeção do mês × meta ── */
+const grupoMeta = c => /shopee|mercado|tiktok|marketplace/i.test(c) ? 'Marketplace' : c;
+function renderProjMeta(){
+  const el = document.getElementById('can-projmeta'); if(!el) return;
+  const V = vendasCanais(), VM0 = vendasMesCanal(), mesAtual = esHoje().slice(0,7);
+  const VM = VM0.map(x=>({...x, g:grupoMeta(x.canal)}));
+  const ult = V.map(r=>r.data).filter(d=>d&&d.startsWith(mesAtual)).sort().pop();
+  const diaUlt = ult ? +ult.slice(8,10) : 0, rest = diasNoMes(mesAtual) - diaUlt;
+  const fechT = mesesDe(V).filter(m=>m<mesAtual), fech = fechT.slice(-3);
+  const metas = (T.metas||[]).map(r=>({mes:normMes(r.mes), canal:(r.canal||'').trim(), meta:num(r.meta), fonte:(r.fonte||'').trim()})).filter(r=>r.mes===mesAtual && r.meta);
+  const metaDe = g => (metas.find(r=>esSemAcento(grupoMeta(r.canal))===esSemAcento(g))||{}).meta || 0;
+  const vm = (g,m) => soma(VM.filter(x=>x.g===g && x.mes===m), x=>x.total);
+  const grupos = [...new Set([...canaisLista().map(grupoMeta), ...metas.map(r=>grupoMeta(r.canal)), ...CUSTOS.filter(c=>!/geral/i.test(c.loja)).map(c=>c.loja)])];
+  // ritmo: 30 dias corridos terminando no último dia com venda na base (a base pode atrasar alguns dias)
+  const ultBase = V.map(r=>r.data).filter(Boolean).sort().pop(), iniR = esAddDias(ultBase, -29);
+  const ritmo = g => soma(V.filter(r=>r.data>=iniR && r.data<=ultBase && grupoMeta(nomeCanal(r.loja))===g), r=>parseFloat(r.total))/30;
+  const L = grupos.map(g=>{
+    const real=vm(g,mesAtual), dia=ritmo(g), proj=real+dia*rest;
+    const ref=fech.length?soma(fech,m=>vm(g,m))/fech.length:0, meta=metaDe(g);
+    // meta pela variação %: último mês fechado × (1 + variação média mês a mês dos últimos 3 meses fechados)
+    const serie = fechT.slice(-4).map(m=>vm(g,m)), vars=[];
+    for(let i=1;i<serie.length;i++) if(serie[i-1]>0 && serie[i]>0) vars.push(serie[i]/serie[i-1]-1);
+    const ultF = serie[serie.length-1]||0, vMed = vars.length ? soma(vars,v=>v)/vars.length : null;
+    const metaVar = ultF && vMed!=null ? ultF*(1+vMed) : 0;
+    return {g, real, dia, proj, ref, meta, metaVar, vMed}; }).filter(x=>x.real||x.meta||x.ref&&x.proj);
+  const tot = k => soma(L,x=>x[k]);
+  const pctCel = (p,m) => m ? `<td class="r ${p>=m?'es-pos':'es-neg'}">${pct(p,m)}</td>` : '<td class="r">—</td>';
+  el.innerHTML = `<div class="table-wrap"><table class="tb-compacta"><thead><tr><th>Canal</th><th class="r">Realizado até ${ult?dBR(ult).slice(0,5):'—'}</th><th class="r">Projeção de ${mesLbl(mesAtual)}</th><th class="r">Meta sugerida (04/10)</th><th class="r">Projeção ÷ meta</th><th class="r">Meta pela variação %</th><th class="r">Projeção ÷ meta %</th><th class="r">Média ${fech.length?mesCurto(fech[0])+'–'+mesCurto(fech[fech.length-1]):''}</th></tr></thead><tbody>${
+    L.map(x=>`<tr><td style="white-space:nowrap"><span class="sw" style="background:${corCanal(x.g==='Marketplace'?'Shopee':x.g)}"></span><b>${x.g}</b></td><td class="r">${brl(x.real)}</td><td class="r"><b>${brl(x.proj)}</b><small>${brl(x.dia)}/dia</small></td><td class="r">${x.meta?brl(x.meta):nPend('a definir')}</td>${pctCel(x.proj,x.meta)}<td class="r">${x.metaVar?brl(x.metaVar):'—'}<small>${x.vMed!=null?(x.vMed>=0?'+':'')+(x.vMed*100).toFixed(0)+'% ao mês':'sem histórico'}</small></td>${pctCel(x.proj,x.metaVar)}<td class="r">${x.ref?brl(x.ref):'—'}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td>Total</td><td class="r">${brl(tot('real'))}</td><td class="r">${brl(tot('proj'))}</td><td class="r">${tot('meta')?brl(tot('meta')):'—'}</td>${pctCel(tot('proj'),tot('meta'))}<td class="r">${brl(tot('metaVar'))}</td>${pctCel(tot('proj'),tot('metaVar'))}<td class="r">${brl(tot('ref'))}</td></tr></tfoot></table></div>
+    <p class="nota"><b>Projeção</b> = realizado no mês + ritmo por dia dos últimos 30 dias × ${rest} dias que faltam, sem sazonalidade (Black Friday fora). <b>Meta sugerida</b>: valores da reunião de 04/10, aba metas. <b>Meta pela variação %</b>: último mês fechado × (1 + variação média mês a mês dos últimos 3 meses fechados) de cada canal. Marketplace = Shopee, Mercado Livre e TikTok.</p>`;
+}
+
+/* ── Produção: próximos lançamentos ── */
+function renderLancamentos(){
+  const el = document.getElementById('pr-lanc'); if(!el) return; const X = T.lancprod;
+  el.innerHTML = X ? `<div class="table-wrap"><table><thead><tr><th>Quando</th><th>Lançamento</th><th>O que entra</th><th>Situação</th><th>Fonte</th></tr></thead><tbody>${
+    X.filter(r=>r.lancamento).map(r=>`<tr><td style="white-space:nowrap"><b>${r.quando||'—'}</b></td><td>${r.lancamento}</td><td>${r.o_que||''}</td><td style="font-size:12px">${/n[aã]o cravada|a definir|a estruturar/i.test(r.status||'')?`<span class="kpi-tag warn">${r.status}</span>`:(r.status||'')}</td><td style="color:var(--text3);font-size:12px">${r.fonte||''}</td></tr>`).join('')}</tbody></table></div>`
+    : pend({t:'Próximos lançamentos', d:'Coleções, drops e eventos com data.', dado:'quando, o que, situação', quem:'Kris e Titanium', onde:'aba <b>proximos-lancamentos</b>'});
+}
+
+/* ── Financeiro: ativo e passivo ── */
+function renderBalanco(){
+  const el = document.getElementById('fin-bal'); if(!el) return; const B = T.balanco;
+  if(!B){ el.innerHTML = pend({t:'Ativo e passivo', d:'O que a Kabak tem (caixa, estoque, a receber) e o que deve (mão de obra, fornecedores, sócio).', dado:'Saldos com data-base', quem:'Gassen / contadora', onde:'aba <b>balanco</b>'}); return; }
+  const R = B.map(r=>({g:esSemAcento(r.grupo), conta:(r.conta||'').trim(), item:(r.item||'').trim(), v:String(r.valor||'').trim()?num(r.valor):null, data:(r.data_base||'').trim(), fonte:(r.fonte||'').trim(), st:(r.status||'').trim()})).filter(r=>r.item);
+  if(FIN.ok && FIN.aPagar.length) R.push({g:'passivo', conta:'Contas', item:`Contas lançadas e não pagas (${FIN.aPagar.length} lançamentos)`, v:soma(FIN.aPagar,l=>l.valor), data:'hoje', fonte:'aba contas', st:'soma'});
+  const soma_ = g => soma(R.filter(r=>r.g===g && r.v!=null && /^soma/i.test(r.st)), r=>r.v);
+  const lado = g => `<div class="table-wrap"><table><thead><tr><th>${g==='ativo'?'Ativo · o que a Kabak tem':'Passivo · o que a Kabak deve'}</th><th class="r">Valor</th><th>Data-base</th><th>Situação</th></tr></thead><tbody>${
+    R.filter(r=>r.g===g).map(r=>{ const conta=/^soma/i.test(r.st); return `<tr><td>${r.item}<small style="display:block;color:var(--text3)">${r.fonte}</small></td><td class="r" style="${conta?'':'color:var(--text3)'}">${r.v!=null?brl(r.v):nPend('a preencher')}</td><td style="white-space:nowrap">${r.data||'—'}</td><td style="font-size:12px">${conta?(r.st.replace(/^soma\s*·?\s*/i,'')||'entra no total'):`<span class="kpi-tag warn">${r.st}</span>`}</td></tr>`; }).join('')}</tbody>
+    <tfoot><tr><td>Total ${g}</td><td class="r">${brl(soma_(g))}</td><td></td><td></td></tr></tfoot></table></div>`;
+  const A=soma_('ativo'), P=soma_('passivo');
+  el.innerHTML = `<div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Ativo</span><span class="kpi-value">${brl(A)}</span><span class="kpi-sub">caixa e estoque a custo</span></div>
+      <div class="kpi"><span class="kpi-label">Passivo</span><span class="kpi-value">${brl(P)}</span><span class="kpi-sub">o que entra no total</span></div>
+      <div class="kpi"><span class="kpi-label">Ativo − passivo</span><span class="kpi-value ${A-P>=0?'es-pos':'es-neg'}">${brl(A-P)}</span><span class="kpi-sub">posição gerencial, não balanço contábil</span></div>
+      <div class="kpi"><span class="kpi-label">Caixa ÷ passivo</span><span class="kpi-value">${P?pct(soma(R.filter(r=>r.g==='ativo'&&/caixa/i.test(r.conta)&&/^soma/i.test(r.st)),r=>r.v),P):'—'}</span><span class="kpi-sub">quanto do que se deve o caixa cobre hoje</span></div></div>
+    <div class="two-col" style="margin-top:14px">${lado('ativo')}${lado('passivo')}</div>
+    <p class="nota">Valores em cinza não entram no total (a confirmar, natureza a definir ou a preencher). O saldo entre os sócios não entra aqui: é acerto entre os sócios, não dívida da Kabak. O estoque é a custo, na contagem de 31/08; as vendas de setembro e outubro já o reduziram.</p>`;
+}
+
+/* ── Resultado: faturamento, despesas, lucro, custos fixos e custo por peça ── */
+function renderResultado(){
+  const el = document.getElementById('res-corpo'); const VM = vendasMesCanal(), P = pecasRows();
+  const mesesCF = [...new Set(CUSTOS.map(c=>c.mes).filter(Boolean))].sort();
+  const ref = mesesCF[mesesCF.length-1];
+  if(!CUSTOS.length || !ref){ el.innerHTML = pend({t:'Custos fixos', d:'Sem a aba custos-fixos não há resultado.', dado:'Aluguel, salários, contas e mensalidades por loja', quem:'Kris', onde:'aba <b>custos-fixos</b>: loja · tipo · valor · referencia · mes'}); return; }
+  const CF = CUSTOS.filter(c=>c.mes===ref);
+  // extrato e marketing do mês
+  const EX = (T.extrato||[]).map(r=>({mes:normMes(r.mes), tipo:esSemAcento(r.tipo), cat:(r.categoria||'').trim(), v:num(r.valor)}));
+  const ext = re => soma(EX.filter(r=>r.mes===ref && r.tipo==='saida' && re.test(r.cat)), r=>r.v);
+  const MK = (T.marketing||[]).map(r=>({mes:normMes(r.mes), midia:num(r.meta_ads)+num(r.google_ads)})).find(r=>r.mes===ref);
+  const fat = soma(VM.filter(x=>x.mes===ref),x=>x.total), fatSite = soma(VM.filter(x=>x.mes===ref && /site/i.test(x.canal)),x=>x.total);
+  const pc = pecasMes(ref), cmv = pc*CUSTO_PECA, cfT = soma(CF,c=>c.valor), midia = MK?MK.midia:0, imp = ext(/imposto/i), fre = ext(/frete/i);
+  const desp = cfT+midia+imp+fre, lucro = fat-cmv-desp;
+  const linhas = [
+    ['Faturamento', fat, `todas as vendas do mês · site ${brl(fatSite)}`, 'tot'],
+    ['(−) Custo das peças vendidas', -cmv, `${inteiro(pc)} peças × ${brl2(CUSTO_PECA)} (lojas, balcão e Shopee) · o site fica de fora até ter as peças`, ''],
+    ['(−) Custos fixos', -cfT, 'aba custos-fixos: lojas e geral (agência, contador, sistemas)', ''],
+    ['(−) Mídia (Meta e Google)', -midia, MK?'aba marketing':'sem linha do mês na aba marketing', ''],
+    ['(−) Impostos', -imp, 'extrato Itaú', ''],
+    ['(−) Frete', -fre, 'extrato Itaú (Frenet)', ''],
+    ['= Lucro do mês', lucro, `margem ${pct(lucro,fat)}`, 'tot'],
+  ];
+  const porLoja = [...new Set(CF.map(c=>c.loja))];
+  const tipos = l => CF.filter(c=>c.loja===l);
+  // custo por peça por canal
+  const canaisP = ['Cachoeira','Santa Rita','Pouso Alegre','Shopee'];
+  const cp = canaisP.map(c=>{ const x=P.find(r=>r.mes===ref&&r.canal===c)||{pecas:0,valor:0,pedidos:0}; const fixo=soma(CF.filter(k=>k.loja===c),k=>k.valor); const f=x.valor||soma(VM.filter(v=>v.mes===ref&&v.canal===c),v=>v.total);
+    return {c, pecas:x.pecas, f, fixo, prod:x.pecas*CUSTO_PECA, total:x.pecas*CUSTO_PECA+fixo}; }).filter(x=>x.pecas||x.fixo);
+  const tP=soma(cp,x=>x.pecas), tF=soma(cp,x=>x.f), tFx=soma(cp,x=>x.fixo), tT=soma(cp,x=>x.total);
+  el.innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Faturamento · ${mesLbl(ref)}</span><span class="kpi-value">${brl(fat)}</span><span class="kpi-sub">${inteiro(pc)} peças sem o site</span></div>
+      <div class="kpi"><span class="kpi-label">Despesas</span><span class="kpi-value">${brl(desp)}</span><span class="kpi-sub">fixos ${brl(cfT)} · mídia ${brl(midia)} · impostos e frete ${brl(imp+fre)}</span></div>
+      <div class="kpi"><span class="kpi-label">Custo das peças vendidas</span><span class="kpi-value">${brl(cmv)}</span><span class="kpi-sub">${brl2(CUSTO_PECA)} por peça, custo médio do estoque</span></div>
+      <div class="kpi"><span class="kpi-label">Lucro do mês</span><span class="kpi-value ${lucro>=0?'es-pos':'es-neg'}">${brl(lucro)}</span><span class="kpi-sub">margem ${pct(lucro,fat)} · sem o custo das peças do site</span></div>
+    </div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Faturamento, despesas e lucro · ${mesLbl(ref)}</div><div class="section-sub">Resultado gerencial do mês, por competência da venda</div></div></div>
+      <div class="table-wrap"><table><tbody>${linhas.map(l=>`<tr${l[3]?' style="font-weight:600;background:var(--bg2,#f6f5f1)"':''}><td>${l[0]}</td><td class="r ${l[3]&&l[1]<0?'es-neg':''}">${brl(l[1])}</td><td class="r">${fat?pct(Math.abs(l[1]),fat):'—'}</td><td style="color:var(--text3);font-size:12px">${l[2]}</td></tr>`).join('')}</tbody></table></div>
+      <p class="nota">O lucro está <b>superestimado</b> enquanto o custo das peças do site não entra (o site vendeu ${brl(fatSite)} no mês). As parcelas da mão de obra ao Jean não entram aqui: pagam produção já feita e estão no passivo (aba Financeiro). O mês do resultado é o último com custos fixos lançados.</p></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Custos fixos · ${mesLbl(ref)}</div><div class="section-sub">Por loja e tipo · fonte: aba custos-fixos</div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Loja</th><th>Tipo</th><th class="r">Valor</th><th class="r">% do total</th></tr></thead><tbody>${
+        porLoja.map(l=>tipos(l).map((c,i)=>`<tr><td>${i?'':'<b>'+l+'</b>'}</td><td>${c.tipo}</td><td class="r">${brl2(c.valor)}</td><td class="r">${pct(c.valor,cfT)}</td></tr>`).join('') + `<tr style="background:var(--bg2,#f6f5f1)"><td></td><td><i>Subtotal ${l}</i></td><td class="r"><b>${brl2(soma(tipos(l),c=>c.valor))}</b></td><td class="r">${pct(soma(tipos(l),c=>c.valor),cfT)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="2">Total dos custos fixos</td><td class="r">${brl2(cfT)}</td><td class="r">100%</td></tr></tfoot></table></div>
+      <p class="nota">Lojas: ${brl2(soma(CF.filter(c=>!/geral/i.test(c.loja)),c=>c.valor))} · geral: ${brl2(soma(CF.filter(c=>/geral/i.test(c.loja)),c=>c.valor))}. Salários por loja, sem nomes. Fora da tabela, a preencher: tráfego das lojas (R$ 5.000/mês combinado em 30/09) e qualquer custo pago por outra conta.</p></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Custo total e custo por peça · ${mesLbl(ref)}</div><div class="section-sub">Peças vendidas no mês × custo do produto + custo fixo da loja</div></div></div>
+      <div class="table-wrap"><table class="tb-compacta"><thead><tr><th>Canal</th><th class="r">Peças vendidas</th><th class="r">Faturamento</th><th class="r">Preço médio por peça</th><th class="r">Custo do produto</th><th class="r">Custo fixo</th><th class="r">Custo total</th><th class="r">Custo por peça</th><th class="r">Sobra por peça</th></tr></thead><tbody>${
+        cp.map(x=>`<tr><td><b>${x.c}</b></td><td class="r">${x.pecas?inteiro(x.pecas):'—'}</td><td class="r">${x.f?brl(x.f):'—'}</td><td class="r">${x.pecas?brl2(x.f/x.pecas):'—'}</td><td class="r">${brl(x.prod)}</td><td class="r">${x.fixo?brl(x.fixo):'—'}</td><td class="r"><b>${brl(x.total)}</b></td><td class="r"><b>${x.pecas?brl2(x.total/x.pecas):'sem venda'}</b></td><td class="r ${x.pecas&&x.f-x.total>=0?'es-pos':'es-neg'}">${x.pecas?brl2((x.f-x.total)/x.pecas):brl(-x.total)+' no mês'}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Lojas e Shopee</td><td class="r">${inteiro(tP)}</td><td class="r">${brl(tF)}</td><td class="r">${tP?brl2(tF/tP):'—'}</td><td class="r">${brl(tP*CUSTO_PECA)}</td><td class="r">${brl(tFx)}</td><td class="r">${brl(tT)}</td><td class="r">${tP?brl2(tT/tP):'—'}</td><td class="r">${tP?brl2((tF-tT)/tP):'—'}</td></tr></tfoot></table></div>
+      <p class="nota">Custo do produto: ${brl2(CUSTO_PECA)} por peça, o custo médio do estoque das lojas (R$ 1.560.481 ÷ 123.635 peças, contagem de 31/08); o custo por produto entra quando a Kris lançar o custo unitário. A Shopee não tem custo fixo próprio, mas paga comissão por venda (não incluída). Os custos gerais (agência, contador, sistemas: ${brl(soma(CF.filter(c=>/geral/i.test(c.loja)),c=>c.valor))}) não estão rateados por peça, porque o site, que mais usa a agência, ainda não tem peças.</p></div>`;
+}
+
+/* ── Vendas: dashboard do Bling (todos os canais, inclui o site) ── */
+function renderBling(){
+  const el = document.getElementById('ven-bling'); if(!el) return;
+  const C = T.blingCan, P = T.blingProd, U = T.blingUF;
+  if(!C && !P){ el.innerHTML=''; return; }
+  let h='';
+  if(C){
+    const R=C.map(r=>({per:(r.periodo||'').trim(), canal:(r.canal||'').trim(), ped:num(r.pedidos), pc:num(r.pecas), v:num(r.valor), fr:num(r.frete)})).filter(r=>r.canal&&r.pc);
+    const pers=[...new Set(R.map(r=>r.per))];
+    const perLbl = p => / a /.test(p) ? p.split(' a ').map(d=>dBR(d)).join(' a ') : mesLbl(normMes(p));
+    h += `<div class="section"><div class="section-hd"><div><div class="section-title">Peças vendidas por canal · dashboard do Bling</div><div class="section-sub">Inclui o site · pedidos atendidos · fonte: aba bling-canais (exportado do Bling)</div></div></div>${
+      pers.map(p=>{ const L=R.filter(r=>r.per===p), tp=soma(L,r=>r.pc), tv=soma(L,r=>r.v), td=soma(L,r=>r.ped);
+        return `<div class="table-wrap" style="margin-bottom:12px"><table><thead><tr><th>${perLbl(p)}</th><th class="r">Pedidos</th><th class="r">Peças</th><th class="r">% das peças</th><th class="r">Valor</th><th class="r">Peças por pedido</th><th class="r">Preço médio por peça</th></tr></thead><tbody>${
+          L.sort((a,b)=>b.pc-a.pc).map(r=>`<tr><td><span class="sw" style="background:${corCanal(r.canal)}"></span><b>${r.canal}</b></td><td class="r">${inteiro(r.ped)}</td><td class="r"><b>${inteiro(r.pc)}</b></td><td class="r">${pct(r.pc,tp)}</td><td class="r">${brl(r.v)}</td><td class="r">${(r.pc/(r.ped||1)).toFixed(1).replace('.',',')}</td><td class="r">${brl2(r.v/r.pc)}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><td>Total</td><td class="r">${inteiro(td)}</td><td class="r">${inteiro(tp)}</td><td class="r">100%</td><td class="r">${brl(tv)}</td><td class="r">${(tp/(td||1)).toFixed(1).replace('.',',')}</td><td class="r">${brl2(tv/tp)}</td></tr></tfoot></table></div>`; }).join('')}
+      <p class="nota">O valor do site no Bling é sem o frete e fica um pouco abaixo do Shopify pago. Peças por mês e por canal entram aqui quando o mesmo relatório for exportado mês a mês (período 2026-06, 2026-07...).</p></div>`;
+  }
+  if(P){
+    const T0=P.map(r=>({per:(r.periodo||'').trim(), pos:num(r.posicao), produto:(r.produto||'').trim(), pc:num(r.pecas), v:num(r.valor), cc:(r.custo_cadastrado||'').trim()})).filter(r=>r.produto);
+    const pers=[...new Set(T0.map(r=>r.per))];
+    const perLbl = p => / a /.test(p) ? p.split(' a ').map(d=>dBR(d)).join(' a ') : mesLbl(normMes(p));
+    // período mais longo = lista geral; os outros = meses
+    const dur = p => / a /.test(p) ? (new Date(p.split(' a ')[1]) - new Date(p.split(' a ')[0])) : 30*864e5;
+    const geral = [...pers].sort((a,b)=>dur(b)-dur(a))[0], mensais = pers.filter(p=>p!==geral);
+    const R=T0.filter(r=>r.per===geral).sort((a,b)=>a.pos-b.pos), sem=R.filter(r=>/n[aã]o/i.test(r.cc));
+    h += `<div class="section"><div class="section-hd"><div><div class="section-title">Produtos mais vendidos · todos os canais</div><div class="section-sub">${perLbl(geral)} · inclui o site · fonte: aba bling-produtos</div></div></div>
+      <div class="table-wrap es-scroll" style="max-height:520px"><table><thead><tr><th>#</th><th>Produto</th><th class="r">Peças</th><th class="r">Valor</th><th class="r">Preço médio</th><th>Custo no Bling</th></tr></thead><tbody>${
+        R.slice(0,30).map(r=>`<tr><td>${r.pos}</td><td>${r.produto}</td><td class="r"><b>${inteiro(r.pc)}</b></td><td class="r">${brl(r.v)}</td><td class="r">${brl2(r.v/r.pc)}</td><td>${/n[aã]o/i.test(r.cc)?'<span class="kpi-tag warn">sem custo</span>':'cadastrado'}</td></tr>`).join('')}</tbody></table></div>
+      <p class="nota">${sem.length} dos ${R.length} produtos da lista estão <b>sem custo cadastrado no Bling</b> (entre eles o Macacão Neo e o jeans): a margem do Bling dá 100% neles e não serve para lucro até o custo ser cadastrado. O relatório de produtos do Bling cobre cerca de 2/3 das peças vendidas (itens sem cadastro de produto ficam de fora): use para o ranking, não para o total.</p>
+      ${mensais.length?`<div class="section-title" style="margin:18px 0 8px">Top 10 de cada mês · todos os canais</div><div class="two-col">${mensais.sort().reverse().map(p=>`<div class="table-wrap"><table><thead><tr><th>${perLbl(p)}</th><th class="r">Peças</th><th class="r">Valor</th></tr></thead><tbody>${
+        T0.filter(r=>r.per===p).sort((a,b)=>a.pos-b.pos).slice(0,10).map(r=>`<tr><td>${r.pos}. ${r.produto}${/n[aã]o/i.test(r.cc)?' <span class="kpi-tag warn">sem custo</span>':''}</td><td class="r">${inteiro(r.pc)}</td><td class="r">${brl(r.v)}</td></tr>`).join('')}</tbody></table></div>`).join('')}</div>`:''}</div>`;
+  }
+  if(U){
+    const R=U.map(r=>({uf:(r.estado||'').trim(), ped:num(r.pedidos), pc:num(r.pecas), v:num(r.valor), fr:num(r.frete_medio)})).filter(r=>r.uf).sort((a,b)=>b.v-a.v);
+    const tv=soma(R,r=>r.v);
+    h += `<div class="section"><div class="section-hd"><div><div class="section-title">Venda online por estado</div><div class="section-sub">Site e Shopee · pedidos com estado de entrega · fonte: aba bling-estados</div></div></div>
+      <div class="hbar-wrap" id="ven-uf"></div><p class="nota">${R.slice(0,3).map(r=>r.uf+' '+pct(r.v,tv)).join(' · ')} do valor online. Os 3 primeiros estados somam ${pct(soma(R.slice(0,3),r=>r.v),tv)}. Frete médio cobrado: de ${brl2(Math.min(...R.filter(r=>r.fr).map(r=>r.fr)))} a ${brl2(Math.max(...R.map(r=>r.fr)))} por pedido.</p></div>`;
+    el.innerHTML = h;
+    hBars('ven-uf', R.slice(0,12).map(r=>({label:r.uf, value:r.v, fmt:brl(r.v)+' · '+inteiro(r.ped)+' ped.'})));
+    return;
+  }
+  el.innerHTML = h;
+}
 
 </script>
 </body>
