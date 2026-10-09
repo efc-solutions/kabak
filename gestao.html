@@ -749,10 +749,12 @@ function esLerContas(rows){
   return {lanc, aportes, aPagar, porFora, saldoIni};
 }
 
+const ES_GIDS = {"caixa-lojas": 1897128924, "itens-vendidos": 1947889357, "metas": 1417611434, "pecas-mes": 1177058407, "top-produtos": 1289325660, "bling-canais": 313503042, "bling-produtos": 1721847727, "bling-estados": 276403026, "extrato-mensal": 460038042, "custos-fixos": 466747987, "balanco": 1075750364, "contas": 671535924, "indicadores": 642789270, "investimentos": 1391859058, "aportes-uso": 949335279, "estoque": 258549964, "estoque-depositos": 1026903426, "producao": 494726412, "em-producao": 1547117559, "proximos-lancamentos": 792734370, "entregas": 1246849529, "trocas": 1711225928, "marketing": 149118948};
 async function esAba(nome, colsObrigatorias){
   // gviz devolve a 1ª aba quando o nome não existe — por isso confere o cabeçalho
   try{
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nome)}`;
+    const gid = ES_GIDS[nome];
+    const url = gid ? `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}` : `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(nome)}`;
     const r = await fetch(url); if(!r.ok) return null;
     const rows = parseCSVText(await r.text());
     if(!rows.length) return null;
