@@ -1938,7 +1938,7 @@ function estoqueAjustes(){
     const R=D.map(r=>({d:(r.deposito||'').trim(), pc:num(r.pecas), data:(r.data||'').trim()})).filter(r=>r.d&&r.pc);
     const cores={'Cachoeira':'#9e3b2e','Santa Rita':'#c8a227','Pouso Alegre':'#3b6ea5'};
     pie=`<div class="section"><div class="section-hd"><div><div class="section-title">Onde está o estoque</div><div class="section-sub">Divisão das peças por depósito no Bling · ${R[0]?.data||''}</div></div></div><div id="est-pie"></div>
-      <p class="nota">O depósito Geral atende o site e o marketplace. A divisão vem do cadastro do Bling, que ainda não tem todas as peças da contagem.</p></div>`;
+      <p class="nota">O depósito Geral atende o site e o marketplace.</p></div>`;
     el.innerHTML=kp+pie;
     svgPie('est-pie', R.sort((a,b)=>b.pc-a.pc).map(r=>({l:r.d, v:r.pc, cor:cores[r.d]||'#2d7a4f'})));
     return;
