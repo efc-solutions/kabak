@@ -484,7 +484,7 @@ function parseCSVText(text) {
 }
 
 // PUB_ID: o código do link de Arquivo > Compartilhar > Publicar na Web (…/d/e/PUB_ID/pub). Vazio = lê pelo link de compartilhamento.
-const PUB_ID = '';
+const PUB_ID = '2PACX-1vSJUTakP1euPUrFZMzAKuSuMfZs9kZ4RVeRuA1SSEZC7OHP39qPq9OWZrbZ13HJwm6jKoGXFB4g2qnl';
 const urlAba = gid => PUB_ID ? `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?gid=${gid}&single=true&output=csv` : `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
 async function csv(sheetName) {
   const gid = SHEET_GIDS[sheetName];
@@ -1861,7 +1861,7 @@ function lucroPorCanal(){
     <tr><td>Pouso Alegre (sem venda)</td><td class="r">—</td><td></td><td></td><td class="r">${brl(pa)}</td><td></td><td></td><td class="r es-neg">${brl(-pa)}</td><td></td></tr>
     <tr><td>Custos gerais (agência, pró-labore, equipe, contador, sistemas)</td><td></td><td></td><td></td><td class="r">${brl(geral)}</td><td></td><td></td><td class="r es-neg">${brl(-geral)}</td><td></td></tr></tbody>
     <tfoot><tr><td>Total</td><td class="r">${brl(T_('f'))}</td><td class="r">${inteiro(T_('pc'))}</td><td class="r">${brl(T_('cmv'))}</td><td class="r">${brl(T_('fixo')+pa+geral)}</td><td class="r">${brl(T_('taxa'))}</td><td class="r">${brl(T_('midia'))}</td><td class="r"><b>${brl(T_('l')-pa-geral)}</b></td><td class="r">${pct(T_('l')-pa-geral,T_('f'))}</td></tr></tfoot></table></div>
-    <p class="nota"><b>Parcial: o custo das peças é estimado.</b> Peças do site: itens dos pedidos pagos no Shopify (o kit conta como 1, então o custo do site fica um pouco abaixo do real); custo da peça ${brl2(CUSTO_PECA)} nas lojas e na Shopee (estoque a custo) e ${brl2(CUSTO_PECA_NOVA)} no site (média dos custos cadastrados no Bling); Shopee com comissão de 20% + R$ 4 por peça; tráfego das lojas de R$ 5.000/mês dividido entre Cachoeira, Santa Rita e Pouso Alegre; mídia de Meta e Google no site. Taxas de cartão e impostos não entram por canal.</p>`;
+    <p class="nota"><b>Parcial: o custo das peças é estimado.</b> Peças do site: itens dos pedidos pagos no Shopify (o kit conta como 1, então o custo do site fica um pouco abaixo do real); custo da peça ${brl2(CUSTO_PECA)} nas lojas e na Shopee (estoque a custo) e ${brl2(CUSTO_PECA_NOVA)} no site (média dos custos cadastrados no Bling); Shopee com comissão de 20% + R$ 4 por peça; tráfego das lojas de R$ 5.000/mês dividido entre Cachoeira, Santa Rita e Pouso Alegre; mídia de Meta e Google no site. Aqui não entram frete, impostos nem taxas de cartão, por isso o total é maior que o do Resultado: <b>o lucro do mês está na aba Resultado</b>.</p>`;
 }
 
 /* ── VENDAS ── */
