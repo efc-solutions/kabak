@@ -722,7 +722,8 @@ function esLerContas(rows){
     let valor=parseFloat(normNum(r['saida']))||parseFloat(normNum(r['valor']))||0;
     // pagamento de mão de obra lançado por engano na coluna de entrada → é saída
     if(entrada>0 && !valor && /m[aã]o de obra/i.test(desc) && !/investimento|aporte/i.test(desc)){ valor=entrada; entrada=0; }
-    if(/^saldo em conta|^dep[oó]sito cheque/i.test(esSemAcento(desc))) return;
+    if(/^saldo em conta/i.test(esSemAcento(desc))){ if(entrada>0) window.SALDO_CONTA={data:venc, valor:entrada}; return; }
+    if(/^dep[oó]sito cheque/i.test(esSemAcento(desc))) return;
     if(/^funcionari[oa]s? /i.test(esSemAcento(desc))) desc = 'PAGAMENTOS DA EQUIPE';
     if(/pro ?-?labore|pagamento duda/i.test(esSemAcento(desc))) desc = /estimad/i.test(desc) ? 'PAGAMENTOS DA EQUIPE (ESTIMADO)' : 'PAGAMENTOS DA EQUIPE';
     const [tipo,cat]=esCategoria(desc, entrada>0);
@@ -1316,7 +1317,7 @@ function renderFinanceiro(){
   // extrato bancário resumido (aba extrato-mensal)
   const EX = T.extrato, elx = document.getElementById('fin-ext');
   if(EX){
-    const X = EX.map(r=>({mes:normMes(r.mes), tipo:esSemAcento(r.tipo), cat:(r.categoria||'').trim(), v:num(r.valor)})).filter(r=>r.mes);
+    const X = EX.map(r=>({mes:normMes(r.mes), tipo:esSemAcento(r.tipo), cat:(r.categoria||'').trim(), v:num(r.valor)})).filter(r=>r.mes && r.mes<esHoje().slice(0,7)); // o mês corrente fica no fluxo pelo controle de contas (o extrato só vai até o 1º dia)
     const ms = [...new Set(X.filter(r=>r.tipo!=='saldo').map(r=>r.mes))].sort();
     const ehAp = c => /aporte/i.test(c), ehConf = c => /confirmar/i.test(c);
     const g = (m,f) => soma(X.filter(r=>r.mes===m && f(r)), r=>r.v);
@@ -1326,7 +1327,7 @@ function renderFinanceiro(){
     elx.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Aportes</th><th class="r">Saídas</th><th class="r">Resultado da operação</th><th class="r">Saldo no fim do mês</th></tr></thead><tbody>${
       lin.map(x=>`<tr><td>${mesLbl(x.m)}</td><td class="r">${brl(x.op)}</td><td class="r">${x.ap?brl(x.ap):'—'}</td><td class="r">${brl(x.sa)}</td><td class="r ${x.op-x.sa>=0?'es-pos':'es-neg'}">${brl(x.op-x.sa)}</td><td class="r">${x.sd!=null?brl(x.sd):'—'}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td>Total</td><td class="r">${brl(T_('op'))}</td><td class="r">${brl(T_('ap'))}</td><td class="r">${brl(T_('sa'))}</td><td class="r">${brl(T_('op')-T_('sa'))}</td><td class="r"></td></tr></tfoot></table></div>
-      <p class="nota">Resultado da operação = entradas da operação − saídas, sem contar os aportes. No período, a operação consumiu ${brl(Math.max(0,T_('sa')-T_('op')))} a mais do que gerou, coberto por ${brl(T_('ap'))} de aportes.${T_('cf')?' Há '+brl(T_('cf'))+' depositados e bloqueados, com origem a confirmar: entram no saldo, mas não foram contados como entrada da operação nem como aporte.':''}</p>`;
+      <p class="nota">Resultado da operação = entradas da operação − saídas, sem contar os aportes. No período, a operação consumiu ${brl(Math.max(0,T_('sa')-T_('op')))} a mais do que gerou, coberto por ${brl(T_('ap'))} de aportes. ${mesLbl(esHoje().slice(0,7))} está no fluxo pelo controle de contas, mais abaixo, porque o extrato só vai até o começo do mês.${T_('cf')?' Há '+brl(T_('cf'))+' depositados e bloqueados, com origem a confirmar: entram no saldo, mas não foram contados como entrada da operação nem como aporte.':''}</p>`;
     const porCat = t => { const o={}; X.filter(r=>r.tipo===t).forEach(r=>o[r.cat]=(o[r.cat]||0)+r.v); const tt=soma(Object.values(o),v=>v); return Object.entries(o).map(([label,value])=>({label,value,fmt:brl(value)+' · '+pct(value,tt)})).sort((a,b)=>b.value-a.value); };
     document.getElementById('fin-ext-cats').style.display='';
     hBars('fin-ext-sai', porCat('saida')); hBars('fin-ext-ent', porCat('entrada'), l=>/aporte/i.test(l)?'#3b6ea5':/confirmar/i.test(l)?'#b9b5aa':'#2d7a4f');
@@ -1343,14 +1344,18 @@ function renderFinanceiro(){
     const ent=m=>soma(L.filter(l=>l.tipo==='entrada'&&l.data.startsWith(m)),l=>l.valor), sai=m=>soma(L.filter(l=>l.tipo==='saida'&&l.data.startsWith(m)),l=>l.valor), apo=m=>soma(FIN.aportes.filter(a=>(a.data||'').startsWith(m)),a=>a.valor);
     const tE=soma(meses,ent), tS=soma(meses,sai), tA=soma(meses,apo), aP=soma(FIN.aPagar,l=>l.valor);
     const eq=soma(L.filter(l=>l.tipo==='saida'&&/equipe|m[aã]o de obra/i.test(l.categoria)),l=>l.valor);
+    const mo=soma(L.filter(l=>l.tipo==='saida'&&/m[aã]o de obra/i.test(l.categoria)),l=>l.valor);
+    const SC=window.SALDO_CONTA; let saldoCard=kInd('saldo_bancario');
+    if(SC && SC.data){ const d0=SC.data; const e=soma(L.filter(l=>l.tipo==='entrada'&&l.data>=d0),l=>l.valor), s_=soma(L.filter(l=>l.tipo==='saida'&&l.data>=d0),l=>l.valor), a_=soma(FIN.aportes.filter(x=>(x.data||'')>=d0),x=>x.valor);
+      saldoCard=`<div class="kpi"><span class="kpi-label">Saldo em conta · estimado</span><span class="kpi-value">${brl(SC.valor+e+a_-s_)}</span><span class="kpi-sub">saldo de 30/09 na planilha da Kris (${brl(SC.valor)}) + entradas e aportes − saídas pagas desde ${dBR(d0)}, sem o cheque bloqueado · confirmar com o extrato</span></div>`; }
     document.getElementById('fin-kpis').innerHTML = `
       <div class="kpi"><span class="kpi-label">Entradas da operação</span><span class="kpi-value">${brl(tE)}</span><span class="kpi-sub">site e lojas, sem aportes</span></div>
       <div class="kpi"><span class="kpi-label">Aportes recebidos</span><span class="kpi-value">${brl(tA)}</span><span class="kpi-sub">entradas de investimento</span></div>
       <div class="kpi"><span class="kpi-label">Saídas pagas</span><span class="kpi-value">${brl(tS)}</span><span class="kpi-sub">com data de pagamento</span></div>
-      <div class="kpi"><span class="kpi-label">Resultado da operação</span><span class="kpi-value ${tE-tS>=0?'es-pos':'es-neg'}">${brl(tE-tS)}</span><span class="kpi-sub">entradas da operação − saídas pagas</span></div>
+      <div class="kpi"><span class="kpi-label">Resultado da operação</span><span class="kpi-value ${tE-tS>=0?'es-pos':'es-neg'}">${brl(tE-tS)}</span><span class="kpi-sub">entradas da operação − saídas pagas${mo?` · inclui ${brl(mo)} de mão de obra à confecção, pagos com aportes; sem ela: <b>${brl(tE-tS+mo)}</b>`:''}</span></div>
       <div class="kpi"><span class="kpi-label">Salários e mão de obra</span><span class="kpi-value">${brl(eq)}</span><span class="kpi-sub">${pct(eq,tS)} das saídas pagas</span></div>
       <div class="kpi"><span class="kpi-label">A pagar</span><span class="kpi-value">${brl(aP)}</span><span class="kpi-sub">${FIN.aPagar.length} lançamentos sem pagamento</span></div>
-      ${kInd('saldo_bancario')}`;
+      ${saldoCard}`;
     document.getElementById('fin-fluxo').innerHTML = `<table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Aportes</th><th class="r">Saídas pagas</th><th class="r">Resultado da operação</th><th class="r">Variação do caixa</th></tr></thead><tbody>${
       meses.map(m=>`<tr><td>${mesLbl(m)}</td><td class="r">${brl(ent(m))}</td><td class="r">${brl(apo(m))}</td><td class="r">${brl(sai(m))}</td><td class="r ${ent(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)-sai(m))}</td><td class="r ${ent(m)+apo(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)+apo(m)-sai(m))}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td>Total</td><td class="r">${brl(tE)}</td><td class="r">${brl(tA)}</td><td class="r">${brl(tS)}</td><td class="r">${brl(tE-tS)}</td><td class="r">${brl(tE+tA-tS)}</td></tr></tfoot></table>
