@@ -1609,9 +1609,13 @@ function renderBalanco(){
 function renderResultado(){
   const el = document.getElementById('res-corpo'); const VM = vendasMesCanal(), P = pecasRows();
   const mesesCF = [...new Set(CUSTOS.map(c=>c.mes).filter(Boolean))].sort();
-  const ref = mesesCF[mesesCF.length-1];
+  const mesAt = esHoje().slice(0,7), opcoes = mesesCF.length ? [...new Set([...mesesCF, ...mesesDe(vendasCanais()).filter(m=>m>=mesesCF[0] && m<=mesAt)])].sort() : [];
+  if(!window.RES_MES || !opcoes.includes(window.RES_MES)) window.RES_MES = opcoes[opcoes.length-1];
+  const ref = window.RES_MES, parcial = ref===mesAt;
+  const ultVenda = vendasCanais().map(r=>r.data).filter(d=>d && d.startsWith(ref)).sort().pop();
+  const mesCF = mesesCF.filter(m=>m<=ref).pop(), cfRef = mesCF && mesCF!==ref;
   if(!CUSTOS.length || !ref){ el.innerHTML = pend({t:'Custos fixos', d:'Sem a aba custos-fixos não há resultado.', dado:'Aluguel, salários, contas e mensalidades por loja', quem:'Kris', onde:'aba <b>custos-fixos</b>: loja · tipo · valor · referencia · mes'}); return; }
-  const CF = CUSTOS.filter(c=>c.mes===ref);
+  const CF = CUSTOS.filter(c=>c.mes===mesCF);
   // extrato e marketing do mês
   const EX = (T.extrato||[]).map(r=>({mes:normMes(r.mes), tipo:esSemAcento(r.tipo), cat:(r.categoria||'').trim(), v:num(r.valor)}));
   const ext = re => soma(EX.filter(r=>r.mes===ref && r.tipo==='saida' && re.test(r.cat)), r=>r.v);
@@ -1619,7 +1623,9 @@ function renderResultado(){
   const fat = soma(VM.filter(x=>x.mes===ref),x=>x.total), fatSite = soma(VM.filter(x=>x.mes===ref && /site/i.test(x.canal)),x=>x.total);
   const pc = pecasMes(ref), pcSite = pecasSite(ref)||0, cmvL = pc*CUSTO_PECA, cmvS = pcSite*CUSTO_PECA_NOVA, cmv = cmvL+cmvS;
   const fatSh = soma(VM.filter(x=>x.mes===ref && /shopee/i.test(x.canal)),x=>x.total), pcSh = (P.find(r=>r.mes===ref&&/shopee/i.test(r.canal))||{}).pecas||0, taxa = 0.20*fatSh + 4*pcSh;
-  const cfT = soma(CF,c=>c.valor), midia = MK?MK.midia:0;
+  const midiaCt = FIN.ok ? soma((FIN.lanc||[]).filter(l=>l.tipo==='saida' && (l.data||'').slice(0,7)===ref && /an[uú]ncio|tr[aá]fego/i.test(l.categoria||'')), l=>l.valor) : 0;
+  const diasMes = new Date(+ref.slice(0,4), +ref.slice(5,7), 0).getDate(), diaAt = parcial && ultVenda ? +ultVenda.slice(8,10) : diasMes, fatorCF = parcial ? diaAt/diasMes : 1;
+  const cfMes = soma(CF,c=>c.valor), cfT = cfMes*fatorCF, midia = MK&&MK.midia ? MK.midia : midiaCt, midiaFonte = MK&&MK.midia ? 'relatório da Titanium (aba marketing)' : 'tráfego pago no mês, pelo controle de contas';
   // impostos e frete: controle de contas da Kris (pagos no mês); sem ele, o extrato
   const doMes = (arr,re) => soma((arr||[]).filter(l=>(l.data||'').slice(0,7)===ref && re.test(l.categoria||'')), l=>l.valor);
   const usaCt = FIN.ok && (FIN.lanc||[]).some(l=>(l.data||'').slice(0,7)===ref);
@@ -1630,8 +1636,8 @@ function renderResultado(){
   const linhas = [
     ['Faturamento', fat, `todas as vendas do mês · site ${brl(fatSite)}`, 'tot'],
     ['(−) Custo das peças vendidas', -cmv, `lojas e Shopee: ${inteiro(pc)} peças × ${brl2(CUSTO_PECA)} · site: ${inteiro(pcSite)} itens × ${brl2(CUSTO_PECA_NOVA)}`, ''],
-    ['(−) Custos fixos', -cfT, 'aba custos-fixos: lojas e geral (agência, pró-labore, equipe, contador, sistemas)', ''],
-    ['(−) Mídia (Meta e Google)', -midia, MK?'relatório da Titanium (aba marketing)':'sem linha do mês na aba marketing', ''],
+    ['(−) Custos fixos', -cfT, parcial ? `${diaAt} de ${diasMes} dias do mês: ${brl(cfMes)} × ${diaAt}/${diasMes}${cfRef?` (custos de ${mesLbl(mesCF)} como referência)`:''}` : cfRef ? `os de ${mesLbl(mesCF)} como referência (o mês ainda não tem custos fixos lançados)` : 'aba custos-fixos: lojas e geral (agência, pró-labore, equipe, contador, sistemas)', ''],
+    ['(−) Mídia (Meta e Google)', -midia, midiaFonte, ''],
     ['(−) Comissão da Shopee', -taxa, '20% do valor + R$ 4 por peça', ''],
     ['(−) Impostos e encargos', -imp, fonteCt+' (DAS, INSS e Caixa)', ''],
     ['(−) Frete', -fre, fonteCt+(frJ?` · inclui ${brl(frJ)} pagos pelo Jean`:''), ''],
@@ -1644,17 +1650,18 @@ function renderResultado(){
   const cp = canaisP.map(c=>{ const x=P.find(r=>r.mes===ref&&r.canal===c)||{pecas:0,valor:0,pedidos:0}; const fixo=soma(CF.filter(k=>k.loja===c),k=>k.valor); const f=x.valor||soma(VM.filter(v=>v.mes===ref&&v.canal===c),v=>v.total);
     return {c, pecas:x.pecas, f, fixo, prod:x.pecas*CUSTO_PECA, total:x.pecas*CUSTO_PECA+fixo}; }).filter(x=>x.pecas||x.fixo);
   const tP=soma(cp,x=>x.pecas), tF=soma(cp,x=>x.f), tFx=soma(cp,x=>x.fixo), tT=soma(cp,x=>x.total);
-  el.innerHTML = `
+  const rotMes = mesLbl(ref)+(parcial?` · parcial, até ${ultVenda?dBR(ultVenda).slice(0,5):'hoje'}`:'');
+  el.innerHTML = `<div class="filter-bar" style="margin-bottom:14px">${opcoes.map(m=>`<button class="pill${m===ref?' active':''}" onclick="window.RES_MES='${m}';RENDER.resultado()">${mesLbl(m)}${m===mesAt?' (parcial)':''}</button>`).join('')}</div>
     <div class="kpi-grid">
-      <div class="kpi"><span class="kpi-label">Faturamento · ${mesLbl(ref)}</span><span class="kpi-value">${brl(fat)}</span><span class="kpi-sub">${inteiro(pc)} peças nas lojas e Shopee · ${inteiro(pcSite)} itens no site</span></div>
+      <div class="kpi"><span class="kpi-label">Faturamento · ${rotMes}</span><span class="kpi-value">${brl(fat)}</span><span class="kpi-sub">${inteiro(pc)} peças nas lojas e Shopee · ${inteiro(pcSite)} itens no site</span></div>
       <div class="kpi"><span class="kpi-label">Despesas</span><span class="kpi-value">${brl(desp)}</span><span class="kpi-sub">fixos ${brl(cfT)} · mídia ${brl(midia)} · impostos, frete e comissão ${brl(imp+fre+taxa)}</span></div>
       <div class="kpi"><span class="kpi-label">Custo das peças vendidas</span><span class="kpi-value">${brl(cmv)}</span><span class="kpi-sub">lojas ${brl(cmvL)} · site ${brl(cmvS)}</span></div>
       <div class="kpi"><span class="kpi-label">Lucro do mês · parcial</span><span class="kpi-value ${lucro>=0?'es-pos':'es-neg'}">${brl(lucro)}</span><span class="kpi-sub">margem ${pct(lucro,fat)} · parcial: o custo das peças é estimado</span></div>
     </div>
-    <div class="section"><div class="section-hd"><div><div class="section-title">Faturamento, despesas e lucro · ${mesLbl(ref)}</div><div class="section-sub">Resultado gerencial do mês, por competência da venda</div></div></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Faturamento, despesas e lucro · ${rotMes}</div><div class="section-sub">Resultado gerencial do mês, por competência da venda</div></div></div>
       <div class="table-wrap"><table><tbody>${linhas.map(l=>`<tr${l[3]?' style="font-weight:600;background:var(--bg2,#f6f5f1)"':''}><td>${l[0]}</td><td class="r ${l[3]&&l[1]<0?'es-neg':''}">${brl(l[1])}</td><td class="r">${fat?pct(Math.abs(l[1]),fat):'—'}</td><td style="color:var(--text3);font-size:12px">${l[2]}</td></tr>`).join('')}</tbody></table></div>
-      <p class="nota">O custo da peça é ${brl2(CUSTO_PECA)} nas lojas e na Shopee (custo médio do estoque contado em 31/08) e ${brl2(CUSTO_PECA_NOVA)} no site (média dos custos cadastrados no Bling); no site o kit conta como 1 item. <b>Resultado parcial: o custo das peças é estimado.</b> As parcelas da mão de obra à confecção não entram aqui: pagam produção já feita e estão no passivo (aba Financeiro). O mês do resultado é o último com custos fixos lançados.</p></div>
-    <div class="section"><div class="section-hd"><div><div class="section-title">Custos fixos · ${mesLbl(ref)}</div><div class="section-sub">Por loja e tipo · fonte: aba custos-fixos</div></div></div>
+      <p class="nota">O custo da peça é ${brl2(CUSTO_PECA)} nas lojas e na Shopee (custo médio do estoque contado em 31/08) e ${brl2(CUSTO_PECA_NOVA)} no site (média dos custos cadastrados no Bling); no site o kit conta como 1 item. <b>Resultado parcial: o custo das peças é estimado.</b> As parcelas da mão de obra à confecção não entram aqui: pagam produção já feita e estão no passivo (aba Financeiro).${parcial?` <b>Mês em andamento:</b> as vendas vão até ${ultVenda?dBR(ultVenda):'a última leitura'} e os custos fixos entram proporcionais aos ${diaAt} dias${cfRef?` (os de ${mesLbl(mesCF)}, como referência)`:''}. A mídia é a que já foi paga no mês.`:''}</p></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Custos fixos · ${mesLbl(mesCF)}${cfRef?' (referência)':''}</div><div class="section-sub">Por loja e tipo · fonte: aba custos-fixos</div></div></div>
       <div class="table-wrap"><table><thead><tr><th>Loja</th><th>Tipo</th><th class="r">Valor</th><th class="r">% do total</th></tr></thead><tbody>${
         porLoja.map(l=>tipos(l).map((c,i)=>`<tr><td>${i?'':'<b>'+l+'</b>'}</td><td>${c.tipo}</td><td class="r">${brl2(c.valor)}</td><td class="r">${pct(c.valor,cfT)}</td></tr>`).join('') + `<tr style="background:var(--bg2,#f6f5f1)"><td></td><td><i>Subtotal ${l}</i></td><td class="r"><b>${brl2(soma(tipos(l),c=>c.valor))}</b></td><td class="r">${pct(soma(tipos(l),c=>c.valor),cfT)}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td colspan="2">Total dos custos fixos</td><td class="r">${brl2(cfT)}</td><td class="r">100%</td></tr></tfoot></table></div>
