@@ -2093,6 +2093,92 @@ function renderCaixaDia(){
 }
 RENDER.caixadia = renderCaixaDia;
 
+/* ── VENDAS: ver por mês (inclusive o mês em andamento) ── */
+window.VEN_MES = window.VEN_MES || 'todos';
+function vendasPorMes(){
+  const tab=document.getElementById('tab-vendas'); if(!tab) return;
+  const meses=mesesDe(vendasCanais()), mesAt=esHoje().slice(0,7);
+  let bar=document.getElementById('ven-mes-bar');
+  if(!bar){ bar=document.createElement('div'); bar.id='ven-mes-bar'; bar.className='filter-bar'; bar.style.margin='0 0 14px';
+    const ph=tab.querySelector('.ph'); ph.parentNode.insertBefore(bar, ph.nextSibling);
+    const box=document.createElement('div'); box.id='ven-mes'; box.className='pilha'; bar.parentNode.insertBefore(box, bar.nextSibling); }
+  const sel=window.VEN_MES;
+  bar.innerHTML=`<span style="font-size:13px;color:var(--text3);margin-right:6px">Ver:</span>`+[['todos','Todos os meses'],...meses.map(m=>[m, mesLbl(m)+(m===mesAt?' (parcial)':'')])].map(([k,l])=>`<button class="pill${k===sel?' active':''}" onclick="window.VEN_MES='${k}';RENDER.vendas()">${l}</button>`).join('');
+  const box=document.getElementById('ven-mes');
+  const outros=[...tab.children].filter(c=>!c.classList.contains('ph') && c!==bar && c!==box);
+  if(sel==='todos'){ box.style.display='none'; box.innerHTML=''; outros.forEach(c=>{ if(c.dataset.vmHide){ c.style.display=c.dataset.vmHide==='_'?'':c.dataset.vmHide; delete c.dataset.vmHide; } }); return; }
+  outros.forEach(c=>{ if(!c.dataset.vmHide){ c.dataset.vmHide=c.style.display||'_'; } c.style.display='none'; });
+  box.style.display='';
+  const m=sel, parcial=m===mesAt, VC=vendasCanais(), VM=vendasMesCanal();
+  const dias=VC.filter(r=>(r.data||'').startsWith(m)).map(r=>r.data).sort(), ult=dias[dias.length-1], diaAt=ult?+ult.slice(8,10):31;
+  const i=meses.indexOf(m), ant=i>0?meses[i-1]:null;
+  const fatDe=(mm,ate)=>soma(VC.filter(r=>(r.data||'').startsWith(mm) && (!ate || +r.data.slice(8,10)<=ate)), r=>parseFloat(r.total)||0);
+  const pedDe=(mm,ate)=>soma(VC.filter(r=>(r.data||'').startsWith(mm) && (!ate || +r.data.slice(8,10)<=ate)), r=>parseInt(r.pedidos)||0);
+  const fat=fatDe(m), ped=pedDe(m), fatAnt=ant?fatDe(ant, parcial?diaAt:null):0;
+  const P=pecasRows().filter(r=>r.mes===m), pcL=soma(P,r=>r.pecas), pcS=pecasSite(m)||0;
+  const fonteP=(T.pecas||[]).find(r=>normMes(r.mes)===m && /até/.test(r.fonte||''));
+  const canais=[...new Set(VM.filter(x=>x.mes===m).map(x=>x.canal))].sort((a,b)=>soma(VM.filter(x=>x.mes===m&&x.canal===b),x=>x.total)-soma(VM.filter(x=>x.mes===m&&x.canal===a),x=>x.total));
+  const linha=c=>{ const v=VM.filter(x=>x.mes===m&&x.canal===c), f=soma(v,x=>x.total), pd=soma(v,x=>x.pedidos), site=/site/i.test(c), pc=site?pcS:soma(P.filter(r=>r.canal===c),r=>r.pecas); return {c,f,pd,pc,site}; };
+  const L=canais.map(linha);
+  const top=(T.top||[]).map(r=>({mes:normMes(r.mes), pos:num(r.posicao), produto:(r.produto||'').trim(), pc:num(r.pecas), v:num(r.valor)})).filter(r=>r.mes===m).sort((a,b)=>a.pos-b.pos);
+  const rot=mesLbl(m)+(parcial?` · parcial, até ${ult?dBR(ult).slice(0,5):'hoje'}`:'');
+  box.innerHTML=`<div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Faturamento · ${rot}</span><span class="kpi-value">${brl(fat)}</span><span class="kpi-sub">${ant?`${mesLbl(ant)}${parcial?` até o dia ${diaAt}`:''}: ${brl(fatAnt)} · <span class="${fat>=fatAnt?'es-pos':'es-neg'}">${fatAnt?((fat/fatAnt-1)*100).toFixed(1).replace('.',',')+'%':'—'}</span>`:'primeiro mês'}</span></div>
+      <div class="kpi"><span class="kpi-label">Pedidos</span><span class="kpi-value">${inteiro(ped)}</span><span class="kpi-sub">ticket médio ${ped?brl2(fat/ped):'—'}</span></div>
+      <div class="kpi"><span class="kpi-label">Peças · lojas e Shopee</span><span class="kpi-value">${pcL?inteiro(pcL):'—'}</span><span class="kpi-sub">${fonteP?'itens do Bling, '+(fonteP.fonte.match(/até \S+/)||[''])[0]:'itens do Bling'}</span></div>
+      <div class="kpi"><span class="kpi-label">Itens · site</span><span class="kpi-value">${pcS?inteiro(pcS):'—'}</span><span class="kpi-sub">Shopify, o kit conta como 1</span></div></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Por canal · ${rot}</div></div></div>
+      <div class="table-wrap"><table><thead><tr><th>Canal</th><th class="r">Faturamento</th><th class="r">% do mês</th><th class="r">Pedidos</th><th class="r">Peças</th><th class="r">Preço médio por peça</th></tr></thead><tbody>${
+        L.map(x=>`<tr><td><span class="sw" style="background:${corCanal(x.c)}"></span><b>${x.c}</b></td><td class="r">${brl(x.f)}</td><td class="r">${pct(x.f,fat)}</td><td class="r">${inteiro(x.pd)}</td><td class="r">${x.pc?inteiro(x.pc)+(x.site?'<small>itens</small>':''):'—'}</td><td class="r">${x.pc?brl2(x.f/x.pc):'—'}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td>Total</td><td class="r">${brl(fat)}</td><td class="r">100%</td><td class="r">${inteiro(ped)}</td><td class="r">${inteiro(pcL+pcS)}</td><td class="r"></td></tr></tfoot></table></div></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Produtos mais vendidos · ${rot}</div><div class="section-sub">Em peças · lojas, balcão e Shopee · o nome junta tamanhos e cores</div></div></div>
+      ${top.length?`<div class="hbar-wrap" id="ven-mes-top"></div>`:'<p class="nota">Sem o ranking deste mês ainda.</p>'}</div>
+    <p class="nota">Faturamento e pedidos: lojas e Shopee pelo Bling (pedido atendido) e site pelo Shopify (pedido pago).${parcial?' Mês em andamento: a comparação é com o mesmo período do mês anterior.':''}</p>`;
+  if(top.length) hBars('ven-mes-top', top.map(r=>({label:r.produto, value:r.pc, fmt:inteiro(r.pc)+' peças · '+brl(r.v)})));
+}
+(function(){ const o=RENDER.vendas; RENDER.vendas=function(){ try{ o&&o(); }catch(e){ console.error('vendas',e); } try{ vendasPorMes(); }catch(e){ console.error('vendas por mês',e); } }; })();
+
+/* ── FINANCEIRO: ver por mês (controle de contas) ── */
+window.FIN_MES = window.FIN_MES || 'todos';
+function financeiroPorMes(){
+  const tab=document.getElementById('tab-financeiro'); if(!tab || !FIN.ok) return;
+  const ehMO=l=>l.tipo==='saida' && /m[aã]o de obra/i.test(l.categoria||'');
+  const LA=FIN.lanc||[], AP=FIN.aportes||[];
+  const meses=[...new Set([...LA,...AP].map(l=>(l.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort(), mesAt=esHoje().slice(0,7);
+  let bar=document.getElementById('fin-mes-bar');
+  if(!bar){ bar=document.createElement('div'); bar.id='fin-mes-bar'; bar.className='filter-bar'; bar.style.margin='0 0 14px';
+    const av=tab.querySelector('.es-aviso')||tab.querySelector('.ph'); av.parentNode.insertBefore(bar, av.nextSibling);
+    const box=document.createElement('div'); box.id='fin-mes'; box.className='pilha'; bar.parentNode.insertBefore(box, bar.nextSibling); }
+  const sel=window.FIN_MES;
+  bar.innerHTML=`<span style="font-size:13px;color:var(--text3);margin-right:6px">Ver:</span>`+[['todos','Visão geral'],...meses.map(m=>[m, mesLbl(m)+(m===mesAt?' (parcial)':'')])].map(([k,l])=>`<button class="pill${k===sel?' active':''}" onclick="window.FIN_MES='${k}';RENDER.financeiro()">${l}</button>`).join('');
+  const box=document.getElementById('fin-mes');
+  const outros=[...tab.children].filter(c=>!c.classList.contains('ph') && !c.classList.contains('es-aviso') && c!==bar && c!==box && c.tagName!=='FOOTER');
+  if(sel==='todos'){ box.style.display='none'; box.innerHTML=''; outros.forEach(c=>{ if(c.dataset.fmHide){ c.style.display=c.dataset.fmHide==='_'?'':c.dataset.fmHide; delete c.dataset.fmHide; } }); return; }
+  outros.forEach(c=>{ if(!c.dataset.fmHide) c.dataset.fmHide=c.style.display||'_'; c.style.display='none'; });
+  box.style.display='';
+  const m=sel, parcial=m===mesAt, noMes=l=>(l.data||'').startsWith(m);
+  const ent=LA.filter(l=>l.tipo==='entrada'&&noMes(l)), sai=LA.filter(l=>l.tipo==='saida'&&noMes(l)&&!ehMO(l)), mo=LA.filter(l=>noMes(l)&&ehMO(l)), apo=AP.filter(noMes);
+  const tE=soma(ent,l=>l.valor), tS=soma(sai,l=>l.valor), tMO=soma(mo,l=>l.valor), tA=soma(apo,a=>a.valor), tAL=tA-tMO;
+  const aPag=(FIN.aPagar||[]).filter(l=>(l.data||'').startsWith(m)), tAP=soma(aPag,l=>l.valor);
+  const ult=[...ent,...sai].map(l=>l.data).sort().pop();
+  const rot=mesLbl(m)+(parcial?` · até ${ult?dBR(ult).slice(0,5):'hoje'}`:'');
+  const cat=arr=>{ const o={}; arr.forEach(l=>o[l.categoria||'Outros']=(o[l.categoria||'Outros']||0)+l.valor); const t=soma(Object.values(o),v=>v); return Object.entries(o).map(([label,value])=>({label,value,fmt:brl(value)+' · '+pct(value,t)})).sort((a,b)=>b.value-a.value); };
+  box.innerHTML=`<div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Entradas da operação · ${rot}</span><span class="kpi-value es-pos">${brl(tE)}</span><span class="kpi-sub">site e lojas, sem aportes</span></div>
+      <div class="kpi"><span class="kpi-label">Saídas da operação</span><span class="kpi-value es-neg">${brl(tS)}</span><span class="kpi-sub">pagas no mês · sem a mão de obra repassada do aporte</span></div>
+      <div class="kpi"><span class="kpi-label">Resultado da operação</span><span class="kpi-value ${tE-tS>=0?'es-pos':'es-neg'}">${brl(tE-tS)}</span><span class="kpi-sub">entradas − saídas da operação</span></div>
+      <div class="kpi"><span class="kpi-label">Aportes</span><span class="kpi-value">${brl(tA)}</span><span class="kpi-sub">${tMO?`${brl(tMO)} repassados direto à mão de obra${tAL?` · ${brl(tAL)} livres`:''}`:'entradas de investimento'}</span></div>
+      <div class="kpi"><span class="kpi-label">Ainda a pagar no mês</span><span class="kpi-value">${brl(tAP)}</span><span class="kpi-sub">${aPag.length} conta(s) com vencimento em ${mesLbl(m)}</span></div></div>
+    <div class="two-col">
+      <div class="section"><div class="section-hd"><div><div class="section-title">Entradas por tipo · ${rot}</div></div></div><div class="hbar-wrap" id="fm-ent"></div></div>
+      <div class="section"><div class="section-hd"><div><div class="section-title">Saídas por categoria · ${rot}</div></div></div><div class="hbar-wrap" id="fm-sai"></div></div></div>
+    ${aPag.length?`<div class="section"><div class="section-hd"><div><div class="section-title">Contas a pagar · vencimento em ${mesLbl(m)}</div></div></div><div class="table-wrap"><table><thead><tr><th>Vencimento</th><th>Categoria</th><th>Descrição</th><th class="r">Valor</th></tr></thead><tbody>${
+      [...aPag].sort((a,b)=>a.data.localeCompare(b.data)).map(l=>`<tr><td style="white-space:nowrap">${dBR(l.data)}</td><td>${l.categoria}</td><td>${l.descricao}</td><td class="r">${brl2(l.valor)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">Total</td><td class="r">${brl2(tAP)}</td></tr></tfoot></table></div></div>`:''}
+    <p class="nota">Fonte: controle de contas (planilha da Kris), pela data de pagamento ou de entrada. A mão de obra à confecção paga com o aporte do Samson do mesmo dia conta só como aporte.${parcial?' Mês em andamento.':''}</p>`;
+  hBars('fm-ent', cat(ent), ()=>'#2d7a4f'); hBars('fm-sai', cat(sai));
+}
+(function(){ const o=RENDER.financeiro; RENDER.financeiro=function(){ try{ o&&o(); }catch(e){ console.error('financeiro',e); } try{ financeiroPorMes(); }catch(e){ console.error('financeiro por mês',e); } }; })();
+
 /* ── LIMPEZA (14/10): menos repetição e menos texto à vista ──
    · blocos "A preencher" saem das abas (a lista de lacunas fica na aba Dados)
    · seções que repetiam número de outra aba ficam escondidas
