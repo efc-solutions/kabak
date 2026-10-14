@@ -268,6 +268,11 @@ table.cen td.r{white-space:nowrap}
 #tab-estrategia td small{max-width:none}
 
 .tb-compacta{font-size:12.5px} .tb-compacta th{white-space:normal;line-height:1.25;vertical-align:bottom} .tb-compacta td,.tb-compacta th{padding-left:6px;padding-right:6px}
+details.como-ler{margin-top:10px}
+details.como-ler summary{cursor:pointer;color:var(--text3,#8a867c);font-size:12.5px;list-style:none;display:inline-flex;align-items:center;gap:6px}
+details.como-ler summary::before{content:'ⓘ';font-size:13px}
+details.como-ler[open] summary{margin-bottom:6px}
+details.como-ler p.nota{margin-top:0}
 
 </style>
 </head>
@@ -2087,6 +2092,38 @@ function renderCaixaDia(){
   svgCols('cxd-30', dias.map(x=>x.slice(8,10)+'/'+x.slice(5,7)), [{name:'Entrou', color:'#2d7a4f', data:e30.map(v=>v||null)},{name:'Saiu', color:'#9e3b2e', data:s30.map(v=>v||null)}], {h:230, labels:false});
 }
 RENDER.caixadia = renderCaixaDia;
+
+/* ── LIMPEZA (14/10): menos repetição e menos texto à vista ──
+   · blocos "A preencher" saem das abas (a lista de lacunas fica na aba Dados)
+   · seções que repetiam número de outra aba ficam escondidas
+   · as notas de cada tabela viram "Como ler", fechadas por padrão */
+const LIMPA_ESCONDE = {
+  canais: ['Evolução por mês','Real × planejado por canal','Lucro por canal'],
+  financeiro: ['Faturamento × caixa','Lucro e projeção financeira','Para onde foi o dinheiro','De onde veio o dinheiro'],
+  aportes: ['Aportado por tipo','Aportado × utilizado'],
+};
+function limpaAba(id){
+  const tab=document.getElementById('tab-'+id); if(!tab) return;
+  const tit = s => (s.querySelector('.section-title')?.textContent||'').trim();
+  (LIMPA_ESCONDE[id]||[]).forEach(t=>tab.querySelectorAll('.section').forEach(s=>{ if(tit(s).startsWith(t)) s.style.display='none'; }));
+  if(id!=='dados'){
+    tab.querySelectorAll('.pend').forEach(p=>{ p.style.display='none'; });
+    tab.querySelectorAll('.section').forEach(s=>{ if(s.style.display==='none') return;
+      const temConteudo=[...s.querySelectorAll('table,svg,canvas,.kpi,.hbar-row,.hbar,p:not(.nota),li')].some(e=>!e.closest('.pend') && !e.closest('.section-hd'));
+      if(!temConteudo) s.style.display='none'; });
+  }
+  tab.querySelectorAll('p.nota').forEach(p=>{
+    if(p.parentElement.tagName==='DETAILS' || p.closest('#tab-dados')) return;
+    const d=document.createElement('details'); d.className='como-ler';
+    d.innerHTML='<summary>Como ler</summary>'; p.parentNode.insertBefore(d,p); d.appendChild(p);
+  });
+}
+(function(){
+  Object.keys(RENDER).forEach(k=>{ const o=RENDER[k]; RENDER[k]=function(){ try{ o.apply(this,arguments); } finally { try{ limpaAba(k); }catch(e){ console.error('limpa',k,e); } } }; });
+  // aba Dados sai do menu e vira link no rodapé
+  const bt=[...document.querySelectorAll('.nav-tab')].find(b=>(b.getAttribute('onclick')||'').includes("'dados'")); if(bt){ bt.style.display='none'; window.BT_DADOS=bt; }
+  const f=document.querySelector('footer'); if(f) f.insertAdjacentHTML('beforeend',` · <a href="#" onclick="goTab('dados',window.BT_DADOS);window.scrollTo(0,0);return false" style="color:inherit">Dados do painel</a>`);
+})();
 
 </script>
 </body>
