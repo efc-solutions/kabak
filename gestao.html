@@ -723,6 +723,9 @@ function esLerContas(rows){
     if(/saldo inicial/i.test(desc)){ const v=parseFloat(normNum(r['entrada']))||parseFloat(normNum(r['valor']))||0; saldoIni={data:normData(r['data vencimento'])||normData(r['data pagamento']), valor:v}; return; }
     const venc=normData(r['data vencimento']), pagRaw=(r['data pagamento']||'').trim(), pag=normData(pagRaw);
     const ehData=/^\d{4}-\d{2}-\d{2}$/.test(pag);
+    let comp=(r['competencia']||'').trim(); const dRef=ehData?pag:venc;
+    if(/^funcionari|pro ?-?labore|pagamento duda|salario|pagamentos da equipe/i.test(esSemAcento(desc)) && !/estimad/i.test(desc) && dRef && +dRef.slice(8,10)<=10){ const dd=new Date(dRef.slice(0,7)+'-01T12:00:00'); dd.setMonth(dd.getMonth()-1); comp=dd.toISOString().slice(0,7); }
+    if(!/^\d{4}-\d{2}$/.test(comp)) comp=(dRef||'').slice(0,7);
     let entrada=parseFloat(normNum(r['entrada']))||0;
     let valor=parseFloat(normNum(r['saida']))||parseFloat(normNum(r['valor']))||0;
     // pagamento de mão de obra lançado por engano na coluna de entrada → é saída
@@ -735,12 +738,12 @@ function esLerContas(rows){
     const loja=esLojaDe(desc);
     if(tipo==='aporte' && /a confirmar/i.test(desc) && !ehData) return;
     if(tipo==='aporte'){ const mo=/m[aã]o de obra/i.test(desc); aportes.push({data:ehData?pag:venc, origem:desc.replace(/ENTRADA|INVESTIMENTO|-|M[AÃ]O DE OBRA/gi,'').trim()||'—', tipo:mo?'para mão de obra':'dinheiro', descricao:desc, valor:entrada||valor}); return; }
-    if(tipo==='entrada'){ lanc.push({data:ehData?pag:venc, tipo:'entrada', categoria:cat, loja, descricao:desc, valor:entrada}); return; }
+    if(tipo==='entrada'){ lanc.push({data:ehData?pag:venc, comp, tipo:'entrada', categoria:cat, loja, descricao:desc, valor:entrada}); return; }
     // saídas
     if(/expirad/i.test(pagRaw)) return;                                   // Pix gerado e não pago
     if(/jean fez|por fora/i.test(pagRaw)){ porFora.push({data:venc, categoria:cat, descricao:desc, valor}); return; }
     const copiada = ehData && venc && (new Date(venc)-new Date(pag))/864e5 >= 20; // data de pgto copiada do mês anterior
-    if(ehData && !copiada) lanc.push({data:pag, venc:venc||pag, tipo:'saida', categoria:cat, loja, descricao:desc, valor});
+    if(ehData && !copiada) lanc.push({data:pag, comp, venc:venc||pag, tipo:'saida', categoria:cat, loja, descricao:desc, valor});
     else aPagar.push({data:venc, categoria:cat, loja, descricao:desc, valor, obs: copiada?'data de pagamento parece copiada do mês anterior':''});
   });
   // pagamentos da equipe: um lançamento por dia, sem nomes nem valores individuais
@@ -1347,8 +1350,9 @@ function renderFinanceiro(){
     document.getElementById('fin-fluxo').innerHTML = pend({t:'Controle de contas', d:'A aba contas não carregou ou está vazia.', dado:'Entradas e saídas lançadas, com vencimento e data de pagamento', quem:'Kris', onde:'aba <b>contas</b> (formato da planilha CONTROLE CONTAS KABAK)'});
     ['fin-cat','fin-apagar','fin-fat'].forEach(i=>document.getElementById(i).innerHTML='');
   } else {
-    const meses=[...new Set([...L, ...FIN.aportes].map(l=>(l.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
-    const ent=m=>soma(L.filter(l=>l.tipo==='entrada'&&l.data.startsWith(m)),l=>l.valor), sai=m=>soma(L.filter(l=>l.tipo==='saida'&&l.data.startsWith(m)),l=>l.valor), apoT=m=>soma(FIN.aportes.filter(a=>(a.data||'').startsWith(m)),a=>a.valor), mom=m=>soma(MO.filter(l=>l.data.startsWith(m)),l=>l.valor), apo=m=>apoT(m)-mom(m);
+    const cm = l => l.comp || (l.data||'').slice(0,7);
+    const meses=[...new Set([...L.map(cm), ...FIN.aportes.map(a=>(a.data||'').slice(0,7))].filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
+    const ent=m=>soma(L.filter(l=>l.tipo==='entrada'&&cm(l)===m),l=>l.valor), sai=m=>soma(L.filter(l=>l.tipo==='saida'&&cm(l)===m),l=>l.valor), apoT=m=>soma(FIN.aportes.filter(a=>(a.data||'').startsWith(m)),a=>a.valor), mom=m=>soma(MO.filter(l=>cm(l)===m),l=>l.valor), apo=m=>apoT(m)-mom(m);
     const tE=soma(meses,ent), tS=soma(meses,sai), tA=soma(meses,apo), tAT=soma(meses,apoT), tMO=soma(meses,mom), aP=soma(FIN.aPagar,l=>l.valor);
     const eq=soma(L.filter(l=>l.tipo==='saida'&&/equipe/i.test(l.categoria)),l=>l.valor);
     const SC=window.SALDO_CONTA; let saldoCard=kInd('saldo_bancario');
@@ -1365,7 +1369,7 @@ function renderFinanceiro(){
     document.getElementById('fin-fluxo').innerHTML = `<table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Saídas da operação</th><th class="r">Resultado da operação</th><th class="r">Aportes livres</th><th class="r">Aporte repassado à mão de obra</th><th class="r">Variação do caixa</th></tr></thead><tbody>${
       meses.map(m=>`<tr><td>${mesLbl(m)}</td><td class="r">${brl(ent(m))}</td><td class="r">${brl(sai(m))}</td><td class="r ${ent(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)-sai(m))}</td><td class="r">${brl(apo(m))}</td><td class="r">${mom(m)?brl(mom(m)):'—'}</td><td class="r ${ent(m)+apo(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)+apo(m)-sai(m))}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td>Total</td><td class="r">${brl(tE)}</td><td class="r">${brl(tS)}</td><td class="r">${brl(tE-tS)}</td><td class="r">${brl(tA)}</td><td class="r">${brl(tMO)}</td><td class="r">${brl(tE+tA-tS)}</td></tr></tfoot></table>
-      <p class="nota">O aporte do Samson para a mão de obra da confecção entra e sai no mesmo dia: conta só como aporte e não entra nas saídas nem no resultado da operação. Variação do caixa = resultado da operação + aportes livres. Só entram os meses lançados no controle de contas; os anteriores estão no fluxo pelo extrato.</p>`;
+      <p class="nota">Cada conta entra no mês a que se refere (competência): o que está na aba de setembro da planilha da Kris conta em setembro, mesmo pago em outubro, e salários e pró-labore pagos até o dia 10 contam no mês anterior. O aporte do Samson para a mão de obra da confecção entra e sai no mesmo dia: conta só como aporte e não entra nas saídas nem no resultado da operação. Variação do caixa = resultado da operação + aportes livres. Só entram os meses lançados no controle de contas; os anteriores estão no fluxo pelo extrato.</p>`;
     const cats={}; L.filter(l=>l.tipo==='saida').forEach(l=>cats[l.categoria]=(cats[l.categoria]||0)+l.valor);
     const cl=Object.entries(cats).map(([label,value])=>({label,value,fmt:brl(value)+' · '+pct(value,tS)})).sort((a,b)=>b.value-a.value);
     document.getElementById('fin-cat-sub').textContent = `${cl.length} categorias · ${meses.map(mesLbl).join(', ')}`;
@@ -1628,11 +1632,11 @@ function renderResultado(){
   const fat = soma(VM.filter(x=>x.mes===ref),x=>x.total), fatSite = soma(VM.filter(x=>x.mes===ref && /site/i.test(x.canal)),x=>x.total);
   const pc = pecasMes(ref), pcSite = pecasSite(ref)||0, cmvL = pc*CUSTO_PECA, cmvS = pcSite*CUSTO_PECA_NOVA, cmv = cmvL+cmvS;
   const fatSh = soma(VM.filter(x=>x.mes===ref && /shopee/i.test(x.canal)),x=>x.total), pcSh = (P.find(r=>r.mes===ref&&/shopee/i.test(r.canal))||{}).pecas||0, taxa = 0.20*fatSh + 4*pcSh;
-  const midiaCt = FIN.ok ? soma((FIN.lanc||[]).filter(l=>l.tipo==='saida' && (l.data||'').slice(0,7)===ref && /an[uú]ncio|tr[aá]fego/i.test(l.categoria||'')), l=>l.valor) : 0;
+  const midiaCt = FIN.ok ? soma((FIN.lanc||[]).filter(l=>l.tipo==='saida' && (l.comp||(l.data||'').slice(0,7))===ref && /an[uú]ncio|tr[aá]fego/i.test(l.categoria||'')), l=>l.valor) : 0;
   const diasMes = new Date(+ref.slice(0,4), +ref.slice(5,7), 0).getDate(), diaAt = parcial && ultVenda ? +ultVenda.slice(8,10) : diasMes, fatorCF = parcial ? diaAt/diasMes : 1;
   const cfMes = soma(CF,c=>c.valor), cfT = cfMes*fatorCF, midia = MK&&MK.midia ? MK.midia : midiaCt, midiaFonte = MK&&MK.midia ? 'relatório da Titanium (aba marketing)' : 'tráfego pago no mês, pelo controle de contas';
   // impostos e frete: controle de contas da Kris (pagos no mês); sem ele, o extrato
-  const doMes = (arr,re) => soma((arr||[]).filter(l=>(l.data||'').slice(0,7)===ref && re.test(l.categoria||'')), l=>l.valor);
+  const doMes = (arr,re) => soma((arr||[]).filter(l=>(l.comp||(l.data||'').slice(0,7))===ref && re.test(l.categoria||'')), l=>l.valor);
   const usaCt = FIN.ok && (FIN.lanc||[]).some(l=>(l.data||'').slice(0,7)===ref);
   const imp = usaCt ? doMes(FIN.lanc.filter(l=>l.tipo==='saida'),/imposto/i) : ext(/imposto/i);
   const frK = usaCt ? doMes(FIN.lanc.filter(l=>l.tipo==='saida'),/frete/i) : ext(/frete/i), frJ = usaCt ? doMes(FIN.porFora,/frete/i) : 0, fre = frK+frJ;
@@ -2144,7 +2148,8 @@ function financeiroPorMes(){
   const tab=document.getElementById('tab-financeiro'); if(!tab || !FIN.ok) return;
   const ehMO=l=>l.tipo==='saida' && /m[aã]o de obra/i.test(l.categoria||'');
   const LA=FIN.lanc||[], AP=FIN.aportes||[];
-  const meses=[...new Set([...LA,...AP].map(l=>(l.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort(), mesAt=esHoje().slice(0,7);
+  const cm=l=>l.comp||(l.data||'').slice(0,7);
+  const meses=[...new Set([...LA.map(cm),...AP.map(a=>(a.data||'').slice(0,7))].filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort(), mesAt=esHoje().slice(0,7);
   let bar=document.getElementById('fin-mes-bar');
   if(!bar){ bar=document.createElement('div'); bar.id='fin-mes-bar'; bar.className='filter-bar'; bar.style.margin='0 0 14px';
     const av=tab.querySelector('.es-aviso')||tab.querySelector('.ph'); av.parentNode.insertBefore(bar, av.nextSibling);
@@ -2156,8 +2161,8 @@ function financeiroPorMes(){
   if(sel==='todos'){ box.style.display='none'; box.innerHTML=''; outros.forEach(c=>{ if(c.dataset.fmHide){ c.style.display=c.dataset.fmHide==='_'?'':c.dataset.fmHide; delete c.dataset.fmHide; } }); return; }
   outros.forEach(c=>{ if(!c.dataset.fmHide) c.dataset.fmHide=c.style.display||'_'; c.style.display='none'; });
   box.style.display='';
-  const m=sel, parcial=m===mesAt, noMes=l=>(l.data||'').startsWith(m);
-  const ent=LA.filter(l=>l.tipo==='entrada'&&noMes(l)), sai=LA.filter(l=>l.tipo==='saida'&&noMes(l)&&!ehMO(l)), mo=LA.filter(l=>noMes(l)&&ehMO(l)), apo=AP.filter(noMes);
+  const m=sel, parcial=m===mesAt, noMes=l=>cm(l)===m, noMesData=l=>(l.data||'').startsWith(m);
+  const ent=LA.filter(l=>l.tipo==='entrada'&&noMes(l)), sai=LA.filter(l=>l.tipo==='saida'&&noMes(l)&&!ehMO(l)), mo=LA.filter(l=>noMes(l)&&ehMO(l)), apo=AP.filter(noMesData);
   const tE=soma(ent,l=>l.valor), tS=soma(sai,l=>l.valor), tMO=soma(mo,l=>l.valor), tA=soma(apo,a=>a.valor), tAL=tA-tMO;
   const aPag=(FIN.aPagar||[]).filter(l=>(l.data||'').startsWith(m)), tAP=soma(aPag,l=>l.valor);
   const ult=[...ent,...sai].map(l=>l.data).sort().pop();
@@ -2174,7 +2179,7 @@ function financeiroPorMes(){
       <div class="section"><div class="section-hd"><div><div class="section-title">Saídas por categoria · ${rot}</div></div></div><div class="hbar-wrap" id="fm-sai"></div></div></div>
     ${aPag.length?`<div class="section"><div class="section-hd"><div><div class="section-title">Contas a pagar · vencimento em ${mesLbl(m)}</div></div></div><div class="table-wrap"><table><thead><tr><th>Vencimento</th><th>Categoria</th><th>Descrição</th><th class="r">Valor</th></tr></thead><tbody>${
       [...aPag].sort((a,b)=>a.data.localeCompare(b.data)).map(l=>`<tr><td style="white-space:nowrap">${dBR(l.data)}</td><td>${l.categoria}</td><td>${l.descricao}</td><td class="r">${brl2(l.valor)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">Total</td><td class="r">${brl2(tAP)}</td></tr></tfoot></table></div></div>`:''}
-    <p class="nota">Fonte: controle de contas (planilha da Kris), pela data de pagamento ou de entrada. A mão de obra à confecção paga com o aporte do Samson do mesmo dia conta só como aporte.${parcial?' Mês em andamento.':''}</p>`;
+    <p class="nota">Fonte: controle de contas (planilha da Kris), por competência: cada conta entra no mês a que se refere. O que está na aba de setembro conta em setembro, mesmo pago em outubro, e salários e pró-labore pagos até o dia 10 contam no mês anterior. A mão de obra à confecção paga com o aporte do Samson do mesmo dia conta só como aporte.${parcial?' Mês em andamento.':''}</p>`;
   hBars('fm-ent', cat(ent), ()=>'#2d7a4f'); hBars('fm-sai', cat(sai));
 }
 (function(){ const o=RENDER.financeiro; RENDER.financeiro=function(){ try{ o&&o(); }catch(e){ console.error('financeiro',e); } try{ financeiroPorMes(); }catch(e){ console.error('financeiro por mês',e); } }; })();
