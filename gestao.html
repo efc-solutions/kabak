@@ -1313,7 +1313,9 @@ function renderMarketing(){
 ══════════════════════════════════════════ */
 function renderFinanceiro(){
   renderBalanco();
-  const L = FIN.lanc, VM = vendasMesCanal();
+  // mão de obra à confecção: paga com o aporte do Samson do mesmo dia (repasse); conta só como aporte, não é saída da operação
+  const ehMO = l => l.tipo==='saida' && /m[aã]o de obra/i.test(l.categoria||'');
+  const MO = (FIN.lanc||[]).filter(ehMO), L = (FIN.lanc||[]).filter(l=>!ehMO(l)), VM = vendasMesCanal();
   // extrato bancário resumido (aba extrato-mensal)
   const EX = T.extrato, elx = document.getElementById('fin-ext');
   if(EX){
@@ -1341,25 +1343,24 @@ function renderFinanceiro(){
     ['fin-cat','fin-apagar','fin-fat'].forEach(i=>document.getElementById(i).innerHTML='');
   } else {
     const meses=[...new Set([...L, ...FIN.aportes].map(l=>(l.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
-    const ent=m=>soma(L.filter(l=>l.tipo==='entrada'&&l.data.startsWith(m)),l=>l.valor), sai=m=>soma(L.filter(l=>l.tipo==='saida'&&l.data.startsWith(m)),l=>l.valor), apo=m=>soma(FIN.aportes.filter(a=>(a.data||'').startsWith(m)),a=>a.valor);
-    const tE=soma(meses,ent), tS=soma(meses,sai), tA=soma(meses,apo), aP=soma(FIN.aPagar,l=>l.valor);
-    const eq=soma(L.filter(l=>l.tipo==='saida'&&/equipe|m[aã]o de obra/i.test(l.categoria)),l=>l.valor);
-    const mo=soma(L.filter(l=>l.tipo==='saida'&&/m[aã]o de obra/i.test(l.categoria)),l=>l.valor);
+    const ent=m=>soma(L.filter(l=>l.tipo==='entrada'&&l.data.startsWith(m)),l=>l.valor), sai=m=>soma(L.filter(l=>l.tipo==='saida'&&l.data.startsWith(m)),l=>l.valor), apoT=m=>soma(FIN.aportes.filter(a=>(a.data||'').startsWith(m)),a=>a.valor), mom=m=>soma(MO.filter(l=>l.data.startsWith(m)),l=>l.valor), apo=m=>apoT(m)-mom(m);
+    const tE=soma(meses,ent), tS=soma(meses,sai), tA=soma(meses,apo), tAT=soma(meses,apoT), tMO=soma(meses,mom), aP=soma(FIN.aPagar,l=>l.valor);
+    const eq=soma(L.filter(l=>l.tipo==='saida'&&/equipe/i.test(l.categoria)),l=>l.valor);
     const SC=window.SALDO_CONTA; let saldoCard=kInd('saldo_bancario');
-    if(SC && SC.data){ const d0=SC.data; const e=soma(L.filter(l=>l.tipo==='entrada'&&l.data>=d0),l=>l.valor), s_=soma(L.filter(l=>l.tipo==='saida'&&l.data>=d0),l=>l.valor), a_=soma(FIN.aportes.filter(x=>(x.data||'')>=d0),x=>x.valor);
+    if(SC && SC.data){ const d0=SC.data; const e=soma(L.filter(l=>l.tipo==='entrada'&&l.data>=d0),l=>l.valor), s_=soma([...L,...MO].filter(l=>l.tipo==='saida'&&l.data>=d0),l=>l.valor), a_=soma(FIN.aportes.filter(x=>(x.data||'')>=d0),x=>x.valor);
       saldoCard=`<div class="kpi"><span class="kpi-label">Saldo em conta · estimado</span><span class="kpi-value">${brl(SC.valor+e+a_-s_)}</span><span class="kpi-sub">saldo de 30/09 na planilha da Kris (${brl(SC.valor)}) + entradas e aportes − saídas pagas desde ${dBR(d0)}, sem o cheque bloqueado · confirmar com o extrato</span></div>`; }
     document.getElementById('fin-kpis').innerHTML = `
       <div class="kpi"><span class="kpi-label">Entradas da operação</span><span class="kpi-value">${brl(tE)}</span><span class="kpi-sub">site e lojas, sem aportes</span></div>
-      <div class="kpi"><span class="kpi-label">Aportes recebidos</span><span class="kpi-value">${brl(tA)}</span><span class="kpi-sub">entradas de investimento</span></div>
-      <div class="kpi"><span class="kpi-label">Saídas pagas</span><span class="kpi-value">${brl(tS)}</span><span class="kpi-sub">com data de pagamento</span></div>
-      <div class="kpi"><span class="kpi-label">Resultado da operação</span><span class="kpi-value ${tE-tS>=0?'es-pos':'es-neg'}">${brl(tE-tS)}</span><span class="kpi-sub">entradas da operação − saídas pagas${mo?` · inclui ${brl(mo)} de mão de obra à confecção, pagos com aportes; sem ela: <b>${brl(tE-tS+mo)}</b>`:''}</span></div>
-      <div class="kpi"><span class="kpi-label">Salários e mão de obra</span><span class="kpi-value">${brl(eq)}</span><span class="kpi-sub">${pct(eq,tS)} das saídas pagas</span></div>
+      <div class="kpi"><span class="kpi-label">Aportes recebidos</span><span class="kpi-value">${brl(tAT)}</span><span class="kpi-sub">${tMO?`dos quais ${brl(tMO)} repassados direto à mão de obra da confecção`:'entradas de investimento'}</span></div>
+      <div class="kpi"><span class="kpi-label">Saídas da operação</span><span class="kpi-value">${brl(tS)}</span><span class="kpi-sub">pagas · sem a mão de obra repassada do aporte</span></div>
+      <div class="kpi"><span class="kpi-label">Resultado da operação</span><span class="kpi-value ${tE-tS>=0?'es-pos':'es-neg'}">${brl(tE-tS)}</span><span class="kpi-sub">entradas da operação − saídas da operação</span></div>
+      <div class="kpi"><span class="kpi-label">Salários, equipe e pró-labore</span><span class="kpi-value">${brl(eq)}</span><span class="kpi-sub">${pct(eq,tS)} das saídas da operação</span></div>
       <div class="kpi"><span class="kpi-label">A pagar</span><span class="kpi-value">${brl(aP)}</span><span class="kpi-sub">${FIN.aPagar.length} lançamentos sem pagamento</span></div>
       ${saldoCard}`;
-    document.getElementById('fin-fluxo').innerHTML = `<table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Aportes</th><th class="r">Saídas pagas</th><th class="r">Resultado da operação</th><th class="r">Variação do caixa</th></tr></thead><tbody>${
-      meses.map(m=>`<tr><td>${mesLbl(m)}</td><td class="r">${brl(ent(m))}</td><td class="r">${brl(apo(m))}</td><td class="r">${brl(sai(m))}</td><td class="r ${ent(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)-sai(m))}</td><td class="r ${ent(m)+apo(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)+apo(m)-sai(m))}</td></tr>`).join('')}</tbody>
-      <tfoot><tr><td>Total</td><td class="r">${brl(tE)}</td><td class="r">${brl(tA)}</td><td class="r">${brl(tS)}</td><td class="r">${brl(tE-tS)}</td><td class="r">${brl(tE+tA-tS)}</td></tr></tfoot></table>
-      <p class="nota">Só entram os meses lançados no controle de contas. Os meses anteriores dependem do extrato bancário.</p>`;
+    document.getElementById('fin-fluxo').innerHTML = `<table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Saídas da operação</th><th class="r">Resultado da operação</th><th class="r">Aportes livres</th><th class="r">Aporte repassado à mão de obra</th><th class="r">Variação do caixa</th></tr></thead><tbody>${
+      meses.map(m=>`<tr><td>${mesLbl(m)}</td><td class="r">${brl(ent(m))}</td><td class="r">${brl(sai(m))}</td><td class="r ${ent(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)-sai(m))}</td><td class="r">${brl(apo(m))}</td><td class="r">${mom(m)?brl(mom(m)):'—'}</td><td class="r ${ent(m)+apo(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)+apo(m)-sai(m))}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>Total</td><td class="r">${brl(tE)}</td><td class="r">${brl(tS)}</td><td class="r">${brl(tE-tS)}</td><td class="r">${brl(tA)}</td><td class="r">${brl(tMO)}</td><td class="r">${brl(tE+tA-tS)}</td></tr></tfoot></table>
+      <p class="nota">O aporte do Samson para a mão de obra da confecção entra e sai no mesmo dia: conta só como aporte e não entra nas saídas nem no resultado da operação. Variação do caixa = resultado da operação + aportes livres. Só entram os meses lançados no controle de contas; os anteriores estão no fluxo pelo extrato.</p>`;
     const cats={}; L.filter(l=>l.tipo==='saida').forEach(l=>cats[l.categoria]=(cats[l.categoria]||0)+l.valor);
     const cl=Object.entries(cats).map(([label,value])=>({label,value,fmt:brl(value)+' · '+pct(value,tS)})).sort((a,b)=>b.value-a.value);
     document.getElementById('fin-cat-sub').textContent = `${cl.length} categorias · ${meses.map(mesLbl).join(', ')}`;
@@ -2027,7 +2028,7 @@ const cxd = {data:null};
 const cxdRotulo = l => (/equipe|sal[aá]r|funcion|pr[oó].?labore/i.test((l.categoria||'')+' '+(l.descricao||''))) ? 'Salários e equipe' : (l.descricao||l.categoria||'—');
 function cxdMovs(){
   const m=[];
-  (FIN.lanc||[]).forEach(l=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(l.data||'')) m.push({data:l.data, tipo:l.tipo, rot:cxdRotulo(l), cat:l.categoria||'', valor:l.valor}); });
+  (FIN.lanc||[]).forEach(l=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(l.data||'')) m.push({data:l.data, tipo:l.tipo, rot:cxdRotulo(l), cat:l.categoria||'', valor:l.valor, repasse: l.tipo==='saida' && /m[aã]o de obra/i.test(l.categoria||'')}); });
   (FIN.aportes||[]).forEach(a=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(a.data||'')) m.push({data:a.data, tipo:'entrada', rot:'Aporte · '+(a.origem||'sócio'), cat:'Aporte', valor:a.valor, aporte:true}); });
   return m;
 }
@@ -2041,14 +2042,14 @@ function renderCaixaDia(){
   if(!cxd.data || !ds.includes(cxd.data)) cxd.data=ds[ds.length-1];
   const M=cxdMovs(), C=cxdCaixa(), d=cxd.data;
   const dia=M.filter(m=>m.data===d), ent=dia.filter(m=>m.tipo==='entrada'), sai=dia.filter(m=>m.tipo==='saida');
-  const tE=soma(ent,m=>m.valor), tS=soma(sai,m=>m.valor), tA=soma(ent.filter(m=>m.aporte),m=>m.valor);
+  const tE=soma(ent,m=>m.valor), tS=soma(sai,m=>m.valor), tA=soma(ent.filter(m=>m.aporte),m=>m.valor); const tR=soma(sai.filter(m=>m.repasse),m=>m.valor);
   const cx=C.filter(r=>r.data===d), tCx=soma(cx,r=>r.valor), lojas=[...new Set(C.map(r=>r.loja))].sort();
   const dFmt=new Date(d+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
   const agrupa=a=>{ const o={}; a.forEach(m=>{ o[m.rot]=(o[m.rot]||0)+m.valor; }); return Object.entries(o).sort((x,y)=>y[1]-x[1]); };
   const lista=(a,cor)=>a.length?`<div class="table-wrap"><table><tbody>${agrupa(a).map(([r,v])=>`<tr><td>${r}</td><td class="r" style="color:${cor}"><b>${brl2(v)}</b></td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="r">${brl2(soma(a,m=>m.valor))}</td></tr></tfoot></table></div>`:'<p class="nota">Nada lançado neste dia.</p>';
   // últimos 30 dias
   const fim=d, ini=esAddDias(d,-29), dias=[]; for(let x=ini; x<=fim; x=esAddDias(x,1)) dias.push(x);
-  const e30=dias.map(x=>soma(M.filter(m=>m.data===x&&m.tipo==='entrada'&&!m.aporte),m=>m.valor)), s30=dias.map(x=>soma(M.filter(m=>m.data===x&&m.tipo==='saida'),m=>m.valor));
+  const e30=dias.map(x=>soma(M.filter(m=>m.data===x&&m.tipo==='entrada'&&!m.aporte),m=>m.valor)), s30=dias.map(x=>soma(M.filter(m=>m.data===x&&m.tipo==='saida'&&!m.repasse),m=>m.valor));
   // próximos 15 dias
   const hoje=esHoje(), lim=esAddDias(hoje,15);
   const prox=(FIN.aPagar||[]).filter(l=>l.data && l.data<=lim).sort((a,b)=>a.data.localeCompare(b.data));
@@ -2060,7 +2061,7 @@ function renderCaixaDia(){
     <div class="kpi-grid">
       <div class="kpi"><span class="kpi-label">Entrou na conta</span><span class="kpi-value es-pos">${brl2(tE)}</span><span class="kpi-sub">${ent.length} lançamento(s)${tA?' · '+brl(tA)+' de aporte':''}</span></div>
       <div class="kpi"><span class="kpi-label">Saiu da conta</span><span class="kpi-value es-neg">${brl2(tS)}</span><span class="kpi-sub">${sai.length} pagamento(s)</span></div>
-      <div class="kpi"><span class="kpi-label">Resultado do dia</span><span class="kpi-value ${tE-tS>=0?'es-pos':'es-neg'}">${brl2(tE-tS)}</span><span class="kpi-sub">entradas − saídas${tA?' · sem aporte: '+brl2(tE-tA-tS):''}</span></div>
+      <div class="kpi"><span class="kpi-label">Resultado do dia</span><span class="kpi-value ${tE-tS>=0?'es-pos':'es-neg'}">${brl2(tE-tS)}</span><span class="kpi-sub">entradas − saídas${tA?' · sem aporte e sem o repasse à mão de obra: '+brl2(tE-tA-(tS-tR)):''}</span></div>
       <div class="kpi"><span class="kpi-label">Vendido nas lojas</span><span class="kpi-value">${cx.length?brl2(tCx):'—'}</span><span class="kpi-sub">${cx.length?'fechamento de caixa · '+[...new Set(cx.map(r=>r.loja))].join(' e '):'sem fechamento lançado neste dia'}</span></div></div>
     <div class="two-col">
       <div class="section"><div class="section-hd"><div><div class="section-title">Entradas do dia</div><div class="section-sub">Controle de contas (aba contas)</div></div></div>${lista(ent,'var(--pos,#2d7a4f)')}</div>
@@ -2069,7 +2070,7 @@ function renderCaixaDia(){
       cx.length?`<div class="table-wrap"><table><thead><tr><th>Forma</th>${lojas.map(l=>`<th class="r">${l}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>${
         [...new Set(cx.map(r=>r.forma))].map(f=>`<tr><td>${f}</td>${lojas.map(l=>{const v=soma(cx.filter(r=>r.forma===f&&r.loja===l),r=>r.valor); return `<td class="r">${v?brl2(v):'—'}</td>`;}).join('')}<td class="r"><b>${brl2(soma(cx.filter(r=>r.forma===f),r=>r.valor))}</b></td></tr>`).join('')}</tbody>
         <tfoot><tr><td>Total</td>${lojas.map(l=>`<td class="r">${brl2(soma(cx.filter(r=>r.loja===l),r=>r.valor))}</td>`).join('')}<td class="r">${brl2(tCx)}</td></tr></tfoot></table></div>`:'<p class="nota">Sem fechamento de caixa das lojas neste dia.</p>'}</div>
-    <div class="section"><div class="section-hd"><div><div class="section-title">Entradas e saídas · últimos 30 dias</div><div class="section-sub">Até ${dBR(d)} · sem aportes nas entradas</div></div></div><div id="cxd-30"></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Entradas e saídas · últimos 30 dias</div><div class="section-sub">Até ${dBR(d)} · sem aportes nas entradas e sem a mão de obra paga com aporte nas saídas</div></div></div><div id="cxd-30"></div>
       <div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Dia</th><th class="r">Entrou</th><th class="r">Saiu</th><th class="r">Resultado</th><th class="r">Vendido nas lojas</th></tr></thead><tbody>${
         sete.map(x=>{const e=soma(M.filter(m=>m.data===x&&m.tipo==='entrada'),m=>m.valor), s=soma(M.filter(m=>m.data===x&&m.tipo==='saida'),m=>m.valor), v=soma(C.filter(r=>r.data===x),r=>r.valor);
           return `<tr style="cursor:pointer" onclick="cxd.data='${x}';renderCaixaDia()"><td>${x===d?'<b>':''}${new Date(x+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})}${x===d?'</b>':''}</td><td class="r">${brl2(e)}</td><td class="r">${brl2(s)}</td><td class="r ${e-s>=0?'es-pos':'es-neg'}">${brl2(e-s)}</td><td class="r">${v?brl2(v):'—'}</td></tr>`;}).join('')}</tbody></table></div>
