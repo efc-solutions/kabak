@@ -718,7 +718,10 @@ function esLojaDe(desc){
 function esLerContas(rows){
   const k = r => { const n={}; for(const c in r) n[esSemAcento(c)] = r[c]; return n; };
   const lanc=[], aportes=[], aPagar=[], porFora=[]; let saldoIni=null;
+  const chDup = r => { const v=normNum(r['valor']||r['saida']||''); if(!(parseFloat(v)>0)) return ''; return [normData(r['data vencimento']), v, normData(r['data pagamento']), (esSemAcento(r['pagamento']||'').trim().split(/\s+/)[0]||'').toUpperCase()].join('|'); };
+  const vistoDup = {};
   rows.map(k).forEach(r=>{
+    { const ch=chDup(r), cp=(r['competencia']||'').trim(); if(ch && cp){ if(vistoDup[ch] && vistoDup[ch]!==cp) return; if(!vistoDup[ch]) vistoDup[ch]=cp; } }
     let desc=(r['pagamento']||'').trim(); if(!desc || /^total$/i.test(desc)) return;
     if(/saldo inicial/i.test(desc)){ const v=parseFloat(normNum(r['entrada']))||parseFloat(normNum(r['valor']))||0; saldoIni={data:normData(r['data vencimento'])||normData(r['data pagamento']), valor:v}; return; }
     const venc=normData(r['data vencimento']), pagRaw=(r['data pagamento']||'').trim(), pag=normData(pagRaw);
@@ -731,7 +734,7 @@ function esLerContas(rows){
     // pagamento de mão de obra lançado por engano na coluna de entrada → é saída
     if(entrada>0 && !valor && /m[aã]o de obra/i.test(desc) && !/investimento|aporte/i.test(desc)){ valor=entrada; entrada=0; }
     if(/^saldo em conta/i.test(esSemAcento(desc))){ if(entrada>0) window.SALDO_CONTA={data:venc, valor:entrada}; return; }
-    if(/^dep[oó]sito cheque/i.test(esSemAcento(desc))) return;
+    if(/^dep[oó]sito cheque/i.test(esSemAcento(desc))){ if(entrada>0) window.CHEQUE_SALDO={data:venc, valor:entrada}; return; }
     if(/^funcionari[oa]s? /i.test(esSemAcento(desc))) desc = 'PAGAMENTOS DA EQUIPE';
     if(/pro ?-?labore|pagamento duda/i.test(esSemAcento(desc))) desc = /estimad/i.test(desc) ? 'PAGAMENTOS DA EQUIPE (ESTIMADO)' : 'PAGAMENTOS DA EQUIPE';
     const [tipo,cat]=esCategoria(desc, entrada>0);
@@ -1337,7 +1340,7 @@ function renderFinanceiro(){
     elx.innerHTML = `<div class="table-wrap"><table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Aportes</th><th class="r">Saídas</th><th class="r">Resultado da operação</th><th class="r">Saldo no fim do mês</th></tr></thead><tbody>${
       lin.map(x=>`<tr><td>${mesLbl(x.m)}</td><td class="r">${brl(x.op)}</td><td class="r">${x.ap?brl(x.ap):'—'}</td><td class="r">${brl(x.sa)}</td><td class="r ${x.op-x.sa>=0?'es-pos':'es-neg'}">${brl(x.op-x.sa)}</td><td class="r">${x.sd!=null?brl(x.sd):'—'}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td>Total</td><td class="r">${brl(T_('op'))}</td><td class="r">${brl(T_('ap'))}</td><td class="r">${brl(T_('sa'))}</td><td class="r">${brl(T_('op')-T_('sa'))}</td><td class="r"></td></tr></tfoot></table></div>
-      <p class="nota">Resultado da operação = entradas da operação − saídas, sem contar os aportes. No período, a operação consumiu ${brl(Math.max(0,T_('sa')-T_('op')))} a mais do que gerou, coberto por ${brl(T_('ap'))} de aportes. ${mesLbl(esHoje().slice(0,7))} está no fluxo pelo controle de contas, mais abaixo, porque o extrato só vai até o começo do mês.${T_('cf')?' Há '+brl(T_('cf'))+' depositados e bloqueados, com origem a confirmar: entram no saldo, mas não foram contados como entrada da operação nem como aporte.':''}</p>`;
+      <p class="nota">Resultado da operação = entradas da operação − saídas, sem contar os aportes. No período, a operação consumiu ${brl(Math.max(0,T_('sa')-T_('op')))} a mais do que gerou, coberto por ${brl(T_('ap'))} de aportes. ${mesLbl(esHoje().slice(0,7))} está no fluxo pelo controle de contas, mais abaixo, porque o extrato só vai até o começo do mês.${T_('cf')?' Há '+brl(T_('cf'))+' em cheques do Samson depositados em 01/10 (segundo a Kris, para a Titanium de setembro e o tráfego de outubro): entram no saldo, mas ainda não foram somados aos aportes.':''}</p>`;
     const porCat = t => { const o={}; X.filter(r=>r.tipo===t).forEach(r=>o[r.cat]=(o[r.cat]||0)+r.v); const tt=soma(Object.values(o),v=>v); return Object.entries(o).map(([label,value])=>({label,value,fmt:brl(value)+' · '+pct(value,tt)})).sort((a,b)=>b.value-a.value); };
     document.getElementById('fin-ext-cats').style.display='';
     hBars('fin-ext-sai', porCat('saida')); hBars('fin-ext-ent', porCat('entrada'), l=>/aporte/i.test(l)?'#3b6ea5':/confirmar/i.test(l)?'#b9b5aa':'#2d7a4f');
@@ -1356,8 +1359,8 @@ function renderFinanceiro(){
     const tE=soma(meses,ent), tS=soma(meses,sai), tA=soma(meses,apo), tAT=soma(meses,apoT), tMO=soma(meses,mom), aP=soma(FIN.aPagar,l=>l.valor);
     const eq=soma(L.filter(l=>l.tipo==='saida'&&/equipe/i.test(l.categoria)),l=>l.valor);
     const SC=window.SALDO_CONTA; let saldoCard=kInd('saldo_bancario');
-    if(SC && SC.data){ const d0=SC.data; const e=soma(L.filter(l=>l.tipo==='entrada'&&l.data>=d0),l=>l.valor), s_=soma([...L,...MO].filter(l=>l.tipo==='saida'&&l.data>=d0),l=>l.valor), a_=soma(FIN.aportes.filter(x=>(x.data||'')>=d0),x=>x.valor);
-      saldoCard=`<div class="kpi"><span class="kpi-label">Saldo em conta · estimado</span><span class="kpi-value">${brl(SC.valor+e+a_-s_)}</span><span class="kpi-sub">saldo de 30/09 na planilha da Kris (${brl(SC.valor)}) + entradas e aportes − saídas pagas desde ${dBR(d0)}, sem o cheque bloqueado · confirmar com o extrato</span></div>`; }
+    if(SC && SC.data){ const d0=SC.data; const e=soma(L.filter(l=>l.tipo==='entrada'&&l.data>=d0),l=>l.valor), s_=soma([...L,...MO].filter(l=>l.tipo==='saida'&&l.data>=d0),l=>l.valor), a_=soma(FIN.aportes.filter(x=>(x.data||'')>=d0),x=>x.valor); const CH=(window.CHEQUE_SALDO&&window.CHEQUE_SALDO.data>=d0)?window.CHEQUE_SALDO.valor:0;
+      saldoCard=`<div class="kpi"><span class="kpi-label">Saldo em conta · estimado</span><span class="kpi-value">${brl(SC.valor+e+a_+CH-s_)}</span><span class="kpi-sub">saldo de 30/09 na planilha da Kris (${brl(SC.valor)}) + entradas e aportes − saídas pagas desde ${dBR(d0)}${CH?` + cheques do Samson depositados em 01/10 (${brl(CH)})`:''} · confirmar com o extrato</span></div>`; }
     document.getElementById('fin-kpis').innerHTML = `
       <div class="kpi"><span class="kpi-label">Entradas da operação</span><span class="kpi-value">${brl(tE)}</span><span class="kpi-sub">site e lojas, sem aportes</span></div>
       <div class="kpi"><span class="kpi-label">Aportes recebidos</span><span class="kpi-value">${brl(tAT)}</span><span class="kpi-sub">${tMO?`dos quais ${brl(tMO)} repassados direto à mão de obra da confecção`:'entradas de investimento'}</span></div>
