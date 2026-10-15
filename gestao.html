@@ -2133,10 +2133,10 @@ function vendasPorMes(){
       <div class="kpi"><span class="kpi-label">Faturamento · ${rot}</span><span class="kpi-value">${brl(fat)}</span><span class="kpi-sub">${ant?`${mesLbl(ant)}${parcial?` até o dia ${diaAt}`:''}: ${brl(fatAnt)} · <span class="${fat>=fatAnt?'es-pos':'es-neg'}">${fatAnt?((fat/fatAnt-1)*100).toFixed(1).replace('.',',')+'%':'—'}</span>`:'primeiro mês'}</span></div>
       <div class="kpi"><span class="kpi-label">Pedidos</span><span class="kpi-value">${inteiro(ped)}</span><span class="kpi-sub">ticket médio ${ped?brl2(fat/ped):'—'}</span></div>
       <div class="kpi"><span class="kpi-label">Peças · lojas e Shopee</span><span class="kpi-value">${pcL?inteiro(pcL):'—'}</span><span class="kpi-sub">${fonteP?'itens do Bling, '+(fonteP.fonte.match(/até \S+/)||[''])[0]:'itens do Bling'}</span></div>
-      <div class="kpi"><span class="kpi-label">Itens · site</span><span class="kpi-value">${pcS?inteiro(pcS):'—'}</span><span class="kpi-sub">Shopify, o kit conta como 1</span></div></div>
+      <div class="kpi"><span class="kpi-label">Itens · site</span><span class="kpi-value">${pcS?inteiro(pcS):'—'}</span><span class="kpi-sub">Shopify, o kit conta como 1${siteItensAte(m)?' · só até '+siteItensAte(m):''}</span></div></div>
     <div class="section"><div class="section-hd"><div><div class="section-title">Por canal · ${rot}</div></div></div>
       <div class="table-wrap"><table><thead><tr><th>Canal</th><th class="r">Faturamento</th><th class="r">% do mês</th><th class="r">Pedidos</th><th class="r">Peças</th><th class="r">Preço médio por peça</th></tr></thead><tbody>${
-        L.map(x=>`<tr><td><span class="sw" style="background:${corCanal(x.c)}"></span><b>${x.c}</b></td><td class="r">${brl(x.f)}</td><td class="r">${pct(x.f,fat)}</td><td class="r">${inteiro(x.pd)}</td><td class="r">${x.pc?inteiro(x.pc)+(x.site?'<small>itens</small>':''):'—'}</td><td class="r">${x.pc?brl2(x.f/x.pc):'—'}</td></tr>`).join('')}</tbody>
+        L.map(x=>`<tr><td><span class="sw" style="background:${corCanal(x.c)}"></span><b>${x.c}</b></td><td class="r">${brl(x.f)}</td><td class="r">${pct(x.f,fat)}</td><td class="r">${inteiro(x.pd)}</td><td class="r">${x.pc?inteiro(x.pc)+(x.site?`<small>itens${siteItensAte(m)?' até '+siteItensAte(m):''}</small>`:''):'—'}</td><td class="r">${x.pc&&!(x.site&&siteItensAte(m))?brl2(x.f/x.pc):'—'}</td></tr>`).join('')}</tbody>
         <tfoot><tr><td>Total</td><td class="r">${brl(fat)}</td><td class="r">100%</td><td class="r">${inteiro(ped)}</td><td class="r">${inteiro(pcL+pcS)}</td><td class="r"></td></tr></tfoot></table></div></div>
     <div class="section"><div class="section-hd"><div><div class="section-title">Produtos mais vendidos · ${rot}</div><div class="section-sub">Em peças · lojas, balcão e Shopee · o nome junta tamanhos e cores</div></div></div>
       ${top.length?`<div class="hbar-wrap" id="ven-mes-top"></div>`:'<p class="nota">Sem o ranking deste mês ainda.</p>'}</div>
@@ -2218,6 +2218,70 @@ function limpaAba(id){
   const bt=[...document.querySelectorAll('.nav-tab')].find(b=>(b.getAttribute('onclick')||'').includes("'dados'")); if(bt){ bt.style.display='none'; window.BT_DADOS=bt; }
   const f=document.querySelector('footer'); if(f) f.insertAdjacentHTML('beforeend',` · <a href="#" onclick="goTab('dados',window.BT_DADOS);window.scrollTo(0,0);return false" style="color:inherit">Dados do painel</a>`);
 })();
+
+/* ── CANAIS: ver um canal só (junto com o filtro de mês) ── */
+canState.canal = canState.canal || 'todos';
+function setCanCanal(btn){ canState.canal = btn.dataset.canal; RENDER.canais(); }
+// itens do site por mês: o Shopify exporta itens em lote, então o mês corrente pode ir só até uma data anterior
+function siteItensAte(m){ const r=(T.pecas||[]).find(x=>normMes(x.mes)===m && /site/i.test(x.canal||'')); const a=r&&(r.fonte||'').match(/até (\d{2}\/\d{2})/); return a?a[1]:''; }
+// peças de um canal no mês: até que dia vão, quando ficam antes da última venda do faturamento (mês em andamento)
+function itensAteCanal(m,c,ultDia){ const r=(T.pecas||[]).find(x=>normMes(x.mes)===m && esSemAcento(CANAL_PECA((x.canal||'').trim()))===esSemAcento(c)); const a=r&&(r.fonte||'').match(/até (\d{2})\/(\d{2})/); if(!a) return '';
+  const d=m+'-'+a[1]; return (ultDia && ultDia.startsWith(m) && d<ultDia) ? a[1]+'/'+a[2] : ''; }
+function canaisPorCanal(){
+  const tab=document.getElementById('tab-canais'); if(!tab) return;
+  const canais=canaisLista(), mesAt=esHoje().slice(0,7);
+  let bar=document.getElementById('can-canal-bar');
+  if(!bar){ bar=document.createElement('div'); bar.id='can-canal-bar'; bar.className='filter-bar'; bar.style.margin='0 0 14px';
+    const ph=tab.querySelector('.ph'); ph.parentNode.insertBefore(bar, ph.nextSibling);
+    const box=document.createElement('div'); box.id='can-canal'; box.className='pilha'; bar.parentNode.insertBefore(box, bar.nextSibling); }
+  if(!canais.includes(canState.canal)) canState.canal='todos';
+  const sel=canState.canal;
+  bar.innerHTML='<span class="filter-label">Canal:</span>'+['todos',...canais].map(c=>`<button class="pill${c===sel?' active':''}" data-canal="${c}" onclick="setCanCanal(this)">${c==='todos'?'Todos':c}</button>`).join('');
+  const box=document.getElementById('can-canal');
+  const outros=[...tab.children].filter(c=>!c.classList.contains('ph') && c!==bar && c!==box);
+  if(sel==='todos'){ box.style.display='none'; box.innerHTML=''; outros.forEach(c=>{ if(c.dataset.ccHide){ c.style.display=c.dataset.ccHide==='_'?'':c.dataset.ccHide; delete c.dataset.ccHide; } }); return; }
+  outros.forEach(c=>{ if(!c.dataset.ccHide){ c.dataset.ccHide=c.style.display||'_'; } c.style.display='none'; });
+  box.style.display='';
+  const c=sel, site=/site/i.test(c), VM=vendasMesCanal(), V=vendasCanais(), P=pecasRows();
+  const meses=mesesDe(V), mSel=canState.mes;
+  const ultDia=V.filter(r=>nomeCanal(r.loja)===c).map(r=>r.data).filter(Boolean).sort().pop()||'';
+  const linhaMes=m=>{ const x=VM.find(r=>r.mes===m&&r.canal===c)||{total:0,pedidos:0}, tot=soma(VM.filter(r=>r.mes===m),r=>r.total);
+    const pc= site ? (pecasSite(m)||0) : soma(P.filter(r=>r.mes===m&&r.canal===c),r=>r.pecas);
+    const ate= itensAteCanal(m, c, ultDia);
+    return {m, f:x.total, pd:x.pedidos, pc, ate, tot}; };
+  const L=meses.map(linhaMes).filter(x=>x.f||x.pd);
+  const A = mSel==='todos' ? L : L.filter(x=>x.m===mSel);
+  const f=soma(A,x=>x.f), pd=soma(A,x=>x.pd), pc=soma(A,x=>x.pc), tot=soma(A,x=>x.tot);
+  const pcSemData=A.filter(x=>!x.ate);   // preço por peça só onde peças e faturamento cobrem o mesmo período
+  const fP=soma(pcSemData,x=>x.f), pcP=soma(pcSemData,x=>x.pc);
+  const rotP = mSel==='todos' ? `de ${mesLbl(L[0]?L[0].m:meses[0])} a ${mesLbl(L.length?L[L.length-1].m:mesAt)}` : mesLbl(mSel)+(mSel===mesAt?` · parcial, até ${ultDia?dBR(ultDia).slice(0,5):'hoje'}`:'');
+  const unid = site?'Itens':'Peças';
+  const ateTxt = A.some(x=>x.ate) ? ` · ${mesLbl(A.find(x=>x.ate).m)} só até ${A.find(x=>x.ate).ate}` : '';
+  // mês corrente: ritmo e projeção de 04/10
+  let projHtml='';
+  if((mSel==='todos'||mSel===mesAt) && L.find(x=>x.m===mesAt)){
+    const x=L.find(x=>x.m===mesAt), dia=ultDia.startsWith(mesAt)?+ultDia.slice(8,10):0, dm=diasNoMes(mesAt), ritmo=dia?x.f/dia*dm:0;
+    const meta=(typeof projDomingo==='function') ? projDomingo(grupoMeta(c), mesAt) : 0;
+    projHtml=`<div class="kpi"><span class="kpi-label">${mesLbl(mesAt)} no ritmo atual</span><span class="kpi-value">${brl(ritmo)}</span><span class="kpi-sub">${brl(x.f)} em ${dia} de ${dm} dias</span></div>
+      <div class="kpi"><span class="kpi-label">Projeção de ${mesLbl(mesAt)} (04/10)</span><span class="kpi-value">${meta?brl(meta):'sem projeção'}</span><span class="kpi-sub">${meta?`${pct(x.f,meta)} já feito · o ritmo chega a ${pct(ritmo,meta)}`:'canal sem projeção definida'}</span></div>`;
+  }
+  box.innerHTML=`<div class="kpi-grid">
+      <div class="kpi"><span class="kpi-label">Faturamento · ${c}</span><span class="kpi-value">${brl(f)}</span><span class="kpi-sub">${rotP} · ${pct(f,tot)} do total</span></div>
+      <div class="kpi"><span class="kpi-label">Pedidos</span><span class="kpi-value">${inteiro(pd)}</span><span class="kpi-sub">ticket médio ${pd?brl2(f/pd):'—'}</span></div>
+      <div class="kpi"><span class="kpi-label">${unid}</span><span class="kpi-value">${pc?inteiro(pc):'—'}</span><span class="kpi-sub">${site?'Shopify, o kit conta como 1':'itens dos pedidos no Bling'}${ateTxt}</span></div>
+      <div class="kpi"><span class="kpi-label">Preço médio por ${site?'item':'peça'}</span><span class="kpi-value">${pcP?brl2(fP/pcP):'—'}</span><span class="kpi-sub">faturamento ÷ ${site?'itens':'peças'}${pcSemData.length<A.length?', sem o mês parcial':''}</span></div>
+      ${projHtml}</div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">${c} mês a mês</div><div class="section-sub">Faturamento${mesLbl(mesAt)?' · '+mesLbl(mesAt)+' é parcial':''}</div></div></div>
+      <div id="can-canal-ch"></div>
+      <div class="table-wrap" style="margin-top:10px"><table><thead><tr><th>Mês</th><th class="r">Faturamento</th><th class="r">vs mês anterior</th><th class="r">% do total</th><th class="r">Pedidos</th><th class="r">Ticket médio</th><th class="r">${unid}</th><th class="r">Preço por ${site?'item':'peça'}</th></tr></thead><tbody>${
+        L.map((x,i)=>{ const a=i>0?L[i-1]:null, vv=a&&a.f&&x.m!==mesAt?(x.f/a.f-1):null;
+          return `<tr${x.m===mSel?' style="background:var(--bg2,#f4f2ee)"':''}><td>${mesLbl(x.m)}${x.m===mesAt?' *':''}</td><td class="r">${brl(x.f)}</td><td class="r ${vv==null?'':vv>=0?'es-pos':'es-neg'}">${vv==null?'—':(vv>=0?'+':'')+(vv*100).toFixed(0)+'%'}</td><td class="r">${pct(x.f,x.tot)}</td><td class="r">${inteiro(x.pd)}</td><td class="r">${x.pd?brl2(x.f/x.pd):'—'}</td><td class="r">${x.pc?inteiro(x.pc)+(x.ate?`<small>até ${x.ate}</small>`:''):'—'}</td><td class="r">${x.pc&&!x.ate?brl2(x.f/x.pc):'—'}</td></tr>`; }).join('')}</tbody></table></div>
+      <p class="nota">* mês em andamento: a variação só é calculada entre meses fechados. Quando as peças vão só até um dia anterior ao faturamento, o preço por peça fica em branco, para não dividir períodos diferentes.${site?' Site: faturamento e pedidos pelo Shopify; itens pela exportação do Shopify.':''}</p></div>`;
+  const ch=document.getElementById('can-canal-ch');
+  if(ch) svgCols(ch, L.map(x=>mesLbl(x.m)+(x.m===mesAt?'*':'')), [{name:c, color:corCanal(c), data:L.map(x=>x.f)}], {h:220});
+}
+(function(){ const o=RENDER.canais; RENDER.canais=function(){ try{ o&&o(); }catch(e){ console.error('canais',e); } try{ canaisPorCanal(); }catch(e){ console.error('canais por canal',e); } }; })();
+const _setCanMesOrig = setCanMes; setCanMes = function(btn){ canState.mes = btn.dataset.mes; RENDER.canais(); };
 
 </script>
 </body>
