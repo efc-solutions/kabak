@@ -386,7 +386,7 @@ details.como-ler p.nota{margin-top:0}
   <div class="section"><div class="section-hd"><div><div class="section-title">Fluxo de caixa pelo controle de contas</div><div class="section-sub">Entradas da operação, aportes e saídas pagas</div></div></div><div class="table-wrap" id="fin-fluxo"></div></div>
   <div class="two-col">
     <div class="section"><div class="section-hd"><div><div class="section-title">Despesas por categoria</div><div class="section-sub" id="fin-cat-sub"></div></div></div><div class="hbar-wrap" id="fin-cat"></div></div>
-    <div class="section"><div class="section-hd"><div><div class="section-title">Contas a pagar</div><div class="section-sub">Lançadas e ainda sem data de pagamento</div></div></div><div class="table-wrap es-scroll" id="fin-apagar"></div></div>
+    <div class="section"><div class="section-hd"><div><div class="section-title">Contas a pagar</div><div class="section-sub">Lançadas e ainda sem data de pagamento, com vencimento até o fim do mês</div></div></div><div class="table-wrap es-scroll" id="fin-apagar"></div></div>
   </div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Faturamento × caixa</div><div class="section-sub">O que foi vendido no mês e o que entrou na conta (venda não é caixa: há prazo de repasse)</div></div></div><div class="table-wrap" id="fin-fat"></div></div>
   <div class="section"><div class="section-hd"><div><div class="section-title">Lucro e projeção financeira</div></div></div><div id="fin-pend"></div></div>
@@ -1356,7 +1356,7 @@ function renderFinanceiro(){
     const cm = l => l.comp || (l.data||'').slice(0,7);
     const meses=[...new Set([...L.map(cm), ...FIN.aportes.map(a=>(a.data||'').slice(0,7))].filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
     const ent=m=>soma(L.filter(l=>l.tipo==='entrada'&&cm(l)===m),l=>l.valor), sai=m=>soma(L.filter(l=>l.tipo==='saida'&&cm(l)===m),l=>l.valor), apoT=m=>soma(FIN.aportes.filter(a=>(a.data||'').startsWith(m)),a=>a.valor), mom=m=>soma(MO.filter(l=>cm(l)===m),l=>l.valor), apo=m=>apoT(m)-mom(m);
-    const tE=soma(meses,ent), tS=soma(meses,sai), tA=soma(meses,apo), tAT=soma(meses,apoT), tMO=soma(meses,mom), aP=soma(FIN.aPagar,l=>l.valor);
+    const tE=soma(meses,ent), tS=soma(meses,sai), tA=soma(meses,apo), tAT=soma(meses,apoT), tMO=soma(meses,mom), fimMesAP=esHoje().slice(0,7)+'-31', AP=FIN.aPagar.filter(l=>!l.data || l.data<=fimMesAP), aP=soma(AP,l=>l.valor);
     const eq=soma(L.filter(l=>l.tipo==='saida'&&/equipe/i.test(l.categoria)),l=>l.valor);
     const SC=window.SALDO_CONTA; let saldoCard=kInd('saldo_bancario');
     if(SC && SC.data){ const d0=SC.data; const e=soma(L.filter(l=>l.tipo==='entrada'&&l.data>=d0),l=>l.valor), s_=soma([...L,...MO].filter(l=>l.tipo==='saida'&&l.data>=d0),l=>l.valor), a_=soma(FIN.aportes.filter(x=>(x.data||'')>=d0),x=>x.valor); const CH=(window.CHEQUE_SALDO&&window.CHEQUE_SALDO.data>=d0)?window.CHEQUE_SALDO.valor:0;
@@ -1367,7 +1367,7 @@ function renderFinanceiro(){
       <div class="kpi"><span class="kpi-label">Saídas da operação</span><span class="kpi-value">${brl(tS)}</span><span class="kpi-sub">pagas · sem a mão de obra repassada do aporte</span></div>
       <div class="kpi"><span class="kpi-label">Resultado da operação</span><span class="kpi-value ${tE-tS>=0?'es-pos':'es-neg'}">${brl(tE-tS)}</span><span class="kpi-sub">entradas da operação − saídas da operação</span></div>
       <div class="kpi"><span class="kpi-label">Salários, equipe e pró-labore</span><span class="kpi-value">${brl(eq)}</span><span class="kpi-sub">${pct(eq,tS)} das saídas da operação</span></div>
-      <div class="kpi"><span class="kpi-label">A pagar</span><span class="kpi-value">${brl(aP)}</span><span class="kpi-sub">${FIN.aPagar.length} lançamentos sem pagamento</span></div>
+      <div class="kpi"><span class="kpi-label">A pagar</span><span class="kpi-value">${brl(aP)}</span><span class="kpi-sub">${AP.length} contas sem pagamento até o fim de ${mesLbl(esHoje().slice(0,7))}</span></div>
       ${saldoCard}`;
     document.getElementById('fin-fluxo').innerHTML = `<table><thead><tr><th>Mês</th><th class="r">Entradas da operação</th><th class="r">Saídas da operação</th><th class="r">Resultado da operação</th><th class="r">Aportes livres</th><th class="r">Aporte repassado à mão de obra</th><th class="r">Variação do caixa</th></tr></thead><tbody>${
       meses.map(m=>`<tr><td>${mesLbl(m)}</td><td class="r">${brl(ent(m))}</td><td class="r">${brl(sai(m))}</td><td class="r ${ent(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)-sai(m))}</td><td class="r">${brl(apo(m))}</td><td class="r">${mom(m)?brl(mom(m)):'—'}</td><td class="r ${ent(m)+apo(m)-sai(m)>=0?'es-pos':'es-neg'}">${brl(ent(m)+apo(m)-sai(m))}</td></tr>`).join('')}</tbody>
@@ -1377,8 +1377,8 @@ function renderFinanceiro(){
     const cl=Object.entries(cats).map(([label,value])=>({label,value,fmt:brl(value)+' · '+pct(value,tS)})).sort((a,b)=>b.value-a.value);
     document.getElementById('fin-cat-sub').textContent = `${cl.length} categorias · ${meses.map(mesLbl).join(', ')}`;
     hBars('fin-cat', cl);
-    document.getElementById('fin-apagar').innerHTML = FIN.aPagar.length ? `<table><thead><tr><th>Vencimento</th><th>Categoria</th><th>Descrição</th><th class="r">Valor</th></tr></thead><tbody>${
-      [...FIN.aPagar].sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(l=>`<tr><td style="white-space:nowrap">${dBR(l.data)}</td><td>${l.categoria}</td><td>${l.descricao}</td><td class="r">${brl2(l.valor)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">Total</td><td class="r">${brl2(aP)}</td></tr></tfoot></table>` : '<p class="nota">Nenhuma conta em aberto.</p>';
+    document.getElementById('fin-apagar').innerHTML = AP.length ? `<table><thead><tr><th>Vencimento</th><th>Categoria</th><th>Descrição</th><th class="r">Valor</th></tr></thead><tbody>${
+      [...AP].sort((a,b)=>(a.data||'').localeCompare(b.data||'')).map(l=>`<tr><td style="white-space:nowrap">${dBR(l.data)}</td><td>${l.categoria}</td><td>${l.descricao}</td><td class="r">${brl2(l.valor)}</td></tr>`).join('')}</tbody><tfoot><tr><td colspan="3">Total</td><td class="r">${brl2(aP)}</td></tr></tfoot></table>` : '<p class="nota">Nenhuma conta em aberto.</p>';
     const mv=mesesDe(vendasCanais());
     document.getElementById('fin-fat').innerHTML = `<table><thead><tr><th>Mês</th><th class="r">Faturamento (vendas)</th><th class="r">Entrou na conta</th><th class="r">Diferença</th><th class="r">Despesas pagas</th><th class="r">Despesas ÷ faturamento</th></tr></thead><tbody>${
       mv.map(m=>{const f=soma(VM.filter(x=>x.mes===m),x=>x.total), e=meses.includes(m)?ent(m):null, s=meses.includes(m)?sai(m):null;
