@@ -891,7 +891,8 @@ const dBR   = iso => iso ? iso.slice(0,10).split('-').reverse().join('/') : '—
 const soma  = (a,f) => a.reduce((s,r)=>s+(f(r)||0),0);
 const diasNoMes = m => new Date(+m.slice(0,4), +m.slice(5,7), 0).getDate();
 const mesesDe = rows => [...new Set(rows.map(r=>(r.data||'').slice(0,7)).filter(m=>/^\d{4}-\d{2}$/.test(m)))].sort();
-const nomeCanal = l => String(l||'').replace(/\s*\(inferido\)/i,'');
+// loja 206335220 = Pouso Alegre (inaugurada em 10/2026; a base ainda a traz como "loja nova … - nomear")
+const nomeCanal = l => /206335220|pouso/i.test(String(l||'')) ? 'Pouso Alegre' : String(l||'').replace(/\s*\(inferido\)/i,'');
 const varPct = (a,b) => b ? ((a-b)/b*100) : null;
 const tagVar = v => v==null ? '—' : `<span class="kpi-tag ${v>=0?'pos':'neg'}">${v>=0?'+':''}${v.toFixed(1).replace('.',',')}%</span>`;
 function normMes(v){
