@@ -694,7 +694,7 @@ function esCategoria(desc, ehEntrada){
   if(ehEntrada){
     if(/SITE/.test(d))          return ['entrada','Repasse site'];
     if(/PIX LOJA|ENTRADA PIX/.test(d)) return ['entrada','Pix lojas'];
-    if(/ENTRADA LOJA/.test(d))  return ['entrada','Cartão lojas'];
+    if(/ENTRADA LOJA|ENTRADA CART/.test(d)) return ['entrada','Cartão lojas'];
     if(/SHOPEE/.test(d))        return ['entrada','Repasse Shopee'];
     if(/MERCADO ?LIVRE/.test(d))return ['entrada','Repasse Mercado Livre'];
     return ['entrada','Outras entradas'];
